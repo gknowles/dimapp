@@ -36,7 +36,7 @@ inline unsigned char charToDigit (unsigned char ch) {
         255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
         255,255,255,255, 255,255,255,255, 255,255,255,255, 255,255,255,255,
     };
-    static_assert(std::size(kCharToDigit) == 256);
+    static_assert(size(kCharToDigit) == 256);
 
     return kCharToDigit[ch];
 }
@@ -48,7 +48,7 @@ inline unsigned char charToDigit (unsigned char ch) {
 //
 //  chars > MAX_INT is treated as MAX_INT
 template<typename T>
-requires (std::is_integral_v<T> && !std::is_same_v<T, bool>)
+requires (is_integral_v<T> && !is_same_v<T, bool>)
 static T strToIntegral (
     const char source[],
     char ** endPtr,
@@ -56,18 +56,18 @@ static T strToIntegral (
     size_t chars = (size_t) -1
 ) {
     // the high order partial digit (and the trailing null :P) are not safe
-    constexpr unsigned kMaxSafeCharsBase10 = std::numeric_limits<T>::digits10;
+    constexpr unsigned kMaxSafeCharsBase10 = numeric_limits<T>::digits10;
     constexpr unsigned kMaxCharsBase16 = 2 * sizeof(T);
 
-    constexpr uint64_t kPositiveValueLimit = std::numeric_limits<T>::max();
+    constexpr uint64_t kPositiveValueLimit = numeric_limits<T>::max();
 
     const char * ptr = source;
     const char * base = ptr;
-    const char * eptr = (chars > std::numeric_limits<int>::max())
-        ? base + std::numeric_limits<int>::max()
+    const char * eptr = (chars > numeric_limits<int>::max())
+        ? base + numeric_limits<int>::max()
         : base + chars;
     [[maybe_unused]] bool negate;
-    if constexpr (std::is_signed_v<T>)
+    if constexpr (is_signed_v<T>)
         negate = false;
 
     unsigned num;
@@ -167,9 +167,9 @@ BASE_ANY_WITH_OVERFLOW:
             if (num >= radix)
                 break;
         }
-        if constexpr (std::is_signed_v<T>) {
+        if constexpr (is_signed_v<T>) {
             val = negate
-                ? -std::numeric_limits<T>::min()
+                ? -numeric_limits<T>::min()
                 : kPositiveValueLimit;
         } else {
             val = kPositiveValueLimit;
@@ -199,7 +199,7 @@ CHECK_NUMBER:
                     // whitespace
                     continue;
                 case '-':
-                    if constexpr (std::is_signed_v<T>)
+                    if constexpr (is_signed_v<T>)
                         negate = true;
                     [[fallthrough]];
                 case '+':
@@ -215,7 +215,7 @@ CHECK_NUMBER:
 RETURN_VALUE:
     if (endPtr)
         *endPtr = const_cast<char *>(ptr);
-    if constexpr (std::is_signed_v<T>) {
+    if constexpr (is_signed_v<T>) {
         if (negate)
             return 0 - static_cast<T>(val);
     }
@@ -281,7 +281,7 @@ static double siFactor(char ** ptr, double binary, double metric) {
 }
 
 //===========================================================================
-bool Dim::parse(double * out, std::string_view src) {
+bool Dim::parse(double * out, string_view src) {
     char buf[maxNumericChars<double>() + 1];
     buf[src.copy(buf, size(buf) - 1)] = 0;
     *out = 0;
@@ -393,7 +393,7 @@ string_view Dim::trim(string_view src) {
 }
 
 //===========================================================================
-string_view Dim::ltrim(std::string_view src) {
+string_view Dim::ltrim(string_view src) {
     const char * first = src.data();
     const char * last = first + src.size();
     while (first < last && isspace(*first))
@@ -402,7 +402,7 @@ string_view Dim::ltrim(std::string_view src) {
 }
 
 //===========================================================================
-string_view Dim::rtrim(std::string_view src) {
+string_view Dim::rtrim(string_view src) {
     const char * first = src.data();
     const char * last = first + src.size();
     for (; first < last; --last) {
@@ -449,6 +449,26 @@ string Dim::trimBlock(string_view src) {
 }
 
 //===========================================================================
+string Dim::normalize(string_view src) {
+    string out;
+    src = trim(src);
+    out.reserve(src.size());
+    auto ws = false;
+    for (auto&& ch : src) {
+        if (isspace(ch)) {
+            if (!ws) {
+                ws = true;
+                out += ' ';
+            }
+            continue;
+        }
+        ws = false;
+        out += ch;
+    }
+    return out;
+}
+
+//===========================================================================
 unique_ptr<char[]> Dim::strDup(string_view src) {
     auto ptr = make_unique<char[]>(src.size() + 1);
     memcpy(ptr.get(), src.data(), src.size());
@@ -457,8 +477,8 @@ unique_ptr<char[]> Dim::strDup(string_view src) {
 }
 
 //===========================================================================
-std::unique_ptr<char[]> Dim::strDupGather(
-    std::string_view * srcs[],
+unique_ptr<char[]> Dim::strDupGather(
+    string_view * srcs[],
     size_t count
 ) {
     size_t len = accumulate(
@@ -496,12 +516,12 @@ static size_t strCopy(T * out, size_t outLen, const T * src, size_t srcLen) {
 }
 
 //===========================================================================
-size_t Dim::strCopy(char * out, size_t outLen, std::string_view src) {
+size_t Dim::strCopy(char * out, size_t outLen, string_view src) {
     return ::strCopy(out, outLen, src.data(), src.size());
 }
 
 //===========================================================================
-size_t Dim::strCopy(wchar_t * out, size_t outLen, std::wstring_view src) {
+size_t Dim::strCopy(wchar_t * out, size_t outLen, wstring_view src) {
     return ::strCopy(out, outLen, src.data(), src.size());
 }
 
@@ -542,7 +562,7 @@ private:
 } // namespace
 
 //===========================================================================
-size_t Dim::strCopy(wchar_t * rawOut, size_t outLen, std::string_view src) {
+size_t Dim::strCopy(wchar_t * rawOut, size_t outLen, string_view src) {
     assert(outLen >= 1); // Must have room for terminating null.
     auto base = (wchar_t *) rawOut;
     auto ptr = base;
@@ -574,7 +594,7 @@ size_t Dim::strCopy(wchar_t * rawOut, size_t outLen, std::string_view src) {
 }
 
 //===========================================================================
-size_t Dim::strCopy(char * rawOut, size_t outLen, std::wstring_view src) {
+size_t Dim::strCopy(char * rawOut, size_t outLen, wstring_view src) {
     assert(outLen >= 1); // Must have room for terminating null.
     auto base = (unsigned char *) rawOut;
     auto ptr = base;
@@ -654,6 +674,120 @@ string Dim::toUpper(string_view src) {
     string out(src);
     toUpper(out.data());
     return out;
+}
+
+
+/****************************************************************************
+*
+*   Interpolation
+*
+*   Expands strings such as "Full name: {firstName} {lastName}"
+*
+***/
+
+//===========================================================================
+static pair<string, bool> interpKey(
+    string_view str,
+    const InterpOpts & opts,
+    const function<std::pair<std::string,bool>(std::string_view)> & fn
+) {
+    using enum InterpFlag;
+    string tmp;
+    if (opts.flags.any(fNormWS)) {
+        tmp = normalize(str);
+        str = tmp;
+    }
+    return fn(str);
+}
+
+//===========================================================================
+string Dim::interp(
+    string_view str,
+    const InterpOpts & opts,
+    function<std::pair<std::string,bool>(std::string_view)> && fn
+) {
+    using enum InterpFlag;
+    string out;
+    size_t pos = 0, epos = str.size();
+    vector<size_t> keys;
+    for (; pos != epos; ++pos) {
+        auto ch = str[pos];
+        if (!ch) {
+            str.remove_suffix(epos - pos);
+            epos = str.size();
+            break;
+        }
+        if (pos + 1 < epos) {
+            auto escape = keys.empty()
+                ? opts.escapeChar
+                : opts.escapeCharInKey;
+            if (ch == escape) {
+                out += str[++pos];
+                continue;
+            }
+            if (ch == str[pos + 1]) {
+                auto escaped = keys.empty()
+                    ? opts.escapedViaRep
+                    : opts.escapedViaRepInKey;
+                if (escaped.find(ch) != string::npos) {
+                    out += ch;
+                    pos += 1;
+                    continue;
+                }
+            }
+        }
+        if (!keys.empty()
+            && !opts.suffix.empty()
+            && str.substr(pos, opts.suffix.size()) == opts.suffix
+        ) {
+            auto key = string_view(
+                out.data() + keys.back(),
+                out.size() - keys.back()
+            );
+            pos += opts.suffix.size() - 1;
+            auto res = interpKey(key, opts, fn);
+            out.replace(keys.back(), string::npos, res.first);
+            keys.pop_back();
+            continue;
+        }
+        if ((keys.empty() || opts.flags.any(fNested | fDelayed))
+            && !opts.prefix.empty()
+            && str.substr(pos, opts.prefix.size()) == opts.prefix
+        ) {
+            keys.push_back(out.size());
+            pos += opts.prefix.size() - 1;
+            continue;
+        }
+        out += ch;
+    }
+    if (!keys.empty() && opts.flags.any(fDelayed)) {
+    }
+    return out;
+}
+
+//===========================================================================
+static pair<string, bool> interpVars(
+    string_view rawStr,
+    const InterpOpts & opts,
+    const unordered_map<string, string> & vars
+) {
+    pair<string, bool> out = {string(rawStr), false};
+    if (auto i = vars.find(out.first); i != vars.end()) {
+        out.first = i->second;
+        out.second = true;
+    }
+    return out;
+}
+
+//===========================================================================
+string Dim::interp(
+    string_view str,
+    const InterpOpts & opts,
+    const unordered_map<string, string> & vars
+) {
+    return interp(str, opts, [&vars, &opts](string_view str) {
+        return interpVars(str, opts, vars);
+    });
 }
 
 

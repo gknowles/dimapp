@@ -192,12 +192,33 @@ static void testCopy() {
 }
 
 //===========================================================================
+static void testInterp() {
+    using enum InterpFlag;
+    int line = 0;
+
+    InterpOpts opts = {
+        .prefix = "$(",
+        .suffix = ")",
+        .flags = fNormWS,
+        .escapedViaRep = "$",
+    };
+    unordered_map<string, string> vars = {
+        { "one", "1" },
+        { "one hundred", "100" },
+    };
+
+    auto str = interp("0, $(one), $( one  hundred  )", opts, vars);
+    EXPECT(str == "0, 1, 100");
+}
+
+//===========================================================================
 static void app(Cli & cli) {
     testParse();
     testStrToInt();
     testToChars();
     testSplit();
     testCopy();
+    testInterp();
 
     testSignalShutdown();
 }

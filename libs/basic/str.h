@@ -13,11 +13,13 @@
 #include <charconv>
 #include <cstdint>
 #include <cstdio>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <string>
 #include <sstream>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -332,6 +334,10 @@ std::string_view rtrim(std::string_view src);
 // leading whitespace that individual lines may have.
 std::string trimBlock(std::string_view src);
 
+// Removes leading/trailing whitespace, and all other sequences of whitespace
+// are replaced with a single space.
+std::string normalize(std::string_view src);
+
 std::unique_ptr<char[]> strDup(std::string_view src);
 
 // Copies contents of all srcs into a single buffer, with null terminators, and
@@ -375,6 +381,58 @@ char * toUpper(char src[], size_t srclen);
 
 std::string toLower(std::string_view src);
 std::string toUpper(std::string_view src);
+
+
+/****************************************************************************
+*
+*   String Interpolation
+*
+*   Replace references embedded in strings.
+*
+***/
+
+enum class InterpFlag : unsigned {
+    // Normalize white space before processing keys.
+    fNormWS         = 1 >> 0,
+
+    // Substs can be made within variable substs.
+    fNested         = 1 >> 1,
+
+    // Open values are closed as if the right matching additional suffixes was
+    // appended.
+    fImplicitClose  = 1 >> 2,
+
+    // Look for additional substs after values are substituted (implies
+    // fNested).
+    fDelayed        = 1 >> 3,
+
+    // By default bad keys are kept in the string verbatim.
+    fRemoveBadKeys  = 1 >> 4,
+};
+template<> struct is_enum_flags<InterpFlag> : std::true_type {};
+
+struct InterpOpts {
+    std::string_view prefix;
+    std::string_view suffix;
+    EnumFlags<InterpFlag> flags = {};
+    char escapeChar = 0;
+    std::string_view escapedViaRep; // Chars that are escaped via repetition
+        // (two sequentital instances represent the literal char).
+    char escapeCharInKey = 0;
+    std::string_view escapedViaRepInKey;
+};
+
+std::string interp(
+    std::string_view str,
+    const InterpOpts & opts,
+    std::function<std::pair<std::string,bool>(std::string_view)> && fn
+);
+
+std::string interp(
+    std::string_view str,
+    const InterpOpts & opts,
+    const std::unordered_map<std::string, std::string> & vars
+);
 
 
 /****************************************************************************

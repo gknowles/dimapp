@@ -168,7 +168,7 @@ static void normalizeAtSlash(
 }
 
 //===========================================================================
-static void normalize(string * path) {
+static void normalizePath(string * path) {
     Count cnt(*path);
     string out;
     out.reserve(path->size());
@@ -426,14 +426,14 @@ string Count::relative(const Count & base) const {
 Path::Path(string_view from)
     : m_data(from)
 {
-    normalize(&m_data);
+    normalizePath(&m_data);
 }
 
 //===========================================================================
 Path::Path(string && from)
     : m_data(move(from))
 {
-    normalize(&m_data);
+    normalizePath(&m_data);
 }
 
 //===========================================================================
@@ -466,7 +466,7 @@ Path & Path::assign(const Path & path, string_view defExt) {
 //===========================================================================
 Path & Path::assign(string_view path) {
     m_data = path;
-    normalize(&m_data);
+    normalizePath(&m_data);
     return *this;
 }
 
@@ -593,7 +593,7 @@ Path & Path::defaultExt(string_view defExt) {
 //===========================================================================
 Path & Path::concat(string_view path) {
     m_data.append(path);
-    normalize(&m_data);
+    normalizePath(&m_data);
     return *this;
 }
 
