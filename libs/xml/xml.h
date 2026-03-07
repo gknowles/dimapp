@@ -56,6 +56,10 @@ public:
 
     IXBuilder & text(std::string_view text);
 
+    // Starts new top level element after one has been ended. Used to create
+    // an XML forest.
+    IXBuilder & startDoc();
+
     template <int N>
     void addRaw(const char (&text)[N]) {
         append({text, N - 1});

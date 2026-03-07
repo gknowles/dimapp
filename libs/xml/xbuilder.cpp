@@ -225,6 +225,17 @@ IXBuilder & IXBuilder::endStart() {
 }
 
 //===========================================================================
+IXBuilder & IXBuilder::startDoc() {
+    switch (m_state) {
+    default: return fail();
+    case kStateDocEnd:
+        m_state = kStateDocIntro;
+        break;
+    }
+    return *this;
+}
+
+//===========================================================================
 IXBuilder::State IXBuilder::state() const {
     return m_state;
 }
