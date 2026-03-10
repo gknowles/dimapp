@@ -42,6 +42,7 @@ https://github.com/gknowles/dimapp/tree/master/tools/cmtupd
       <Exclude regex=".*\.g\.js"/>
       <Exclude regex="web/srv/vendor/.*"/>
       <Exclude regex="site/vendor/.*"/>
+      <Exclude regex="res/docgen-res/vendor/.*"/>
       <File regex=".*\.adoc"/>
       <File regex=".*\.md"/>
       <File regex=".*\.natvis"/> <!-- xml -->
