@@ -10,11 +10,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
-## Unreleased (2026-02-??)
+## Unreleased
+- Cosmetic - Syntax highlight with prismjs instead of highlightjs
 - Added - Process code files into site pages
 - Added - Variables and their inclusion in docgen.xml
 - Added - Groups of pages with table of contents for the group
 - Fixed - Crash making tests when requested layout not found
+- Added - Interpolate internal ${version} and/or ${buildTime} variables
 
 ## docgen 1.5.0 (2025-02-20)
 - Fixed - Honor non-default layouts from older tagged versions

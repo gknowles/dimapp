@@ -291,10 +291,10 @@ static vector<CodeBlock> findMarkdownBlocks(const PageInfo & info) {
 
 //===========================================================================
 static vector<CodeBlock> findBlocks(const PageInfo & info) {
-    switch (info.page.type) {
-    case Page::kAsciidoc:
+    switch (info.page.typeInfo->type) {
+    case PageType::kAsciidoc:
         return findAsciidocBlocks(info);
-    case Page::kMarkdown:
+    case PageType::kMarkdown:
         return findMarkdownBlocks(info);
     default:
         return {};

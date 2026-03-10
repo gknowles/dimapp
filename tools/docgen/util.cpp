@@ -15,20 +15,38 @@ using namespace Dim;
 *
 ***/
 
-constexpr TokenTable::Token s_fileTypes[] = {
-    { (int) Page::kAsciidoc, ".adoc" },
-    { (int) Page::kAsciidoc, ".asc" },
-    { (int) Page::kAsciidoc, ".asciidoc" },
-    { (int) Page::kMarkdown, ".md" },
-    { (int) Page::kMarkdown, ".markdown" },
-    { (int) Page::kCpp,      ".c" },
-    { (int) Page::kCpp,      ".cpp" },
-    { (int) Page::kCpp,      ".cxx" },
-    { (int) Page::kCpp,      ".h" },
-    { (int) Page::kCpp,      ".hpp" },
-    { (int) Page::kCpp,      ".hxx" },
+constinit TokenTable::Token s_fileTypes[] = {
+    { (int) PageType::kAsciidoc, ".adoc" },
+    { (int) PageType::kAsciidoc, ".asc" },
+    { (int) PageType::kAsciidoc, ".asciidoc" },
+    { (int) PageType::kMarkdown, ".md" },
+    { (int) PageType::kMarkdown, ".markdown" },
+    { (int) PageType::kCpp,      ".c" },
+    { (int) PageType::kCpp,      ".cpp" },
+    { (int) PageType::kCpp,      ".cxx" },
+    { (int) PageType::kCpp,      ".h" },
+    { (int) PageType::kCpp,      ".hpp" },
+    { (int) PageType::kCpp,      ".hxx" },
 };
 const TokenTable s_fileTypeTbl(s_fileTypes);
+
+const vector<PageTypeInfo> s_pageTypes = []() {
+    vector<PageTypeInfo> out;
+    PageTypeInfo infos[] = {
+        { PageType::kAsciidoc, PageProcess::kMarkupToHtml },
+        { PageType::kMarkdown, PageProcess::kMarkupToHtml },
+        { PageType::kCpp,      PageProcess::kCodeToHtml, "C++", "cpp" },
+    };
+    for (auto&& info : infos) {
+        auto pos = (size_t) info.type;
+        if (out.size() < pos + 1)
+            out.resize(pos + 1);
+        out[pos] = info;
+    }
+    return out;
+}();
+
+static unordered_map<string, string> s_interpVars;
 
 
 /****************************************************************************
@@ -187,10 +205,11 @@ static bool loadPage(
 ) {
     out->name = attrValue(root, "name", "");
     out->file = attrValue(root, "file", "");
-    out->type = s_fileTypeTbl.find(
+    auto type = s_fileTypeTbl.find(
         Path(out->file).extension(),
-        Page::kUnknown
+        PageType::kUnknown
     );
+    out->typeInfo = &s_pageTypes.at((size_t) type);
     out->urlSegment = attrValue(root, "url", "");
     if (out->urlSegment.empty())
         out->urlSegment = Path(out->file).stem();
@@ -486,35 +505,9 @@ unique_ptr<Config> loadConfig(string_view cfgfile, LoadMode mode) {
 
 /****************************************************************************
 *
-*   Load and write content
+*   Load, write, and interpolate content
 *
 ***/
-
-//===========================================================================
-void writeContent(
-    function<void()> fn,
-    string_view path,
-    string_view content
-) {
-    struct Write : IFileWriteNotify {
-        function<void()> fn;
-        string path;
-
-        void onFileWrite(const FileWriteData & data) override {
-            if (data.written != data.data.size()) {
-                logMsgError() << path << ": error writing file.";
-                appSignalShutdown(EX_IOERR);
-            }
-            fn();
-            delete this;
-        }
-    };
-
-    auto notify = new Write;
-    notify->fn = fn;
-    notify->path = path;
-    fileSaveBinary(notify, path, content);
-}
 
 //===========================================================================
 void loadContent(
@@ -571,6 +564,49 @@ void loadContent(
         cmdline,
         objname
     );
+}
+
+//===========================================================================
+void writeContent(
+    function<void()> fn,
+    string_view path,
+    string_view content
+) {
+    struct Write : IFileWriteNotify {
+        function<void()> fn;
+        string path;
+
+        void onFileWrite(const FileWriteData & data) override {
+            if (data.written != data.data.size()) {
+                logMsgError() << path << ": error writing file.";
+                appSignalShutdown(EX_IOERR);
+            }
+            fn();
+            delete this;
+        }
+    };
+
+    auto notify = new Write;
+    notify->fn = fn;
+    notify->path = path;
+    fileSaveBinary(notify, path, content);
+}
+
+//===========================================================================
+string interpContent(string_view content) {
+    using enum InterpFlag;
+    if (s_interpVars.empty()) {
+        s_interpVars["version"] = toString(appVersion());
+        s_interpVars["buildTime"] = Time8601Str(envExecBuildTime()).view();
+    }
+    InterpOpts opts = {
+        .prefix = "${",
+        .suffix = "}",
+        .flags = fNormWS,
+        .escapedViaRep = "$",
+    };
+    auto out = interp(content, opts, s_interpVars);
+    return out;
 }
 
 //===========================================================================

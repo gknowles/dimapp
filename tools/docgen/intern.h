@@ -66,16 +66,27 @@ enum LoadMode : uint8_t {
     fLoadAny   = fLoadSite | fLoadTests,
 };
 
+enum class PageType {
+    kUnknown,
+    kAsciidoc,
+    kMarkdown,
+    kCpp,
+};
+enum class PageProcess {
+    kUnknown,
+    kMarkupToHtml,
+    kCodeToHtml,
+};
+struct PageTypeInfo {
+    PageType type = PageType::kUnknown;
+    PageProcess process = PageProcess::kUnknown;
+    std::string preLang;
+    std::string codeLang;
+};
 struct Page {
-    enum Type {
-        kUnknown,
-        kAsciidoc,
-        kMarkdown,
-        kCpp,
-    };
     std::string name;
     std::string file;
-    Type type = kUnknown;
+    const PageTypeInfo * typeInfo = {};
     std::string urlSegment;
     Dim::Path urlRoot;
     bool defaultPage = false;
@@ -145,13 +156,13 @@ void writeContent(
     std::string_view path,
     std::string_view content
 );
-
 void loadContent(
     std::function<void(std::string&&)> fn,
     const Config & site,
     std::string_view tag,
     std::string_view file
 );
+std::string interpContent(std::string_view content);
 
 std::unique_ptr<Config> loadConfig(std::string_view cfgfile, LoadMode mode);
 std::unique_ptr<Config> loadConfig(
