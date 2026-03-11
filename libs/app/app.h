@@ -147,7 +147,7 @@ int appExitCode();
 //      /crash
 //      /data
 //      /log
-//      /web
+//      /web    - may be changed via app.xml/App/WebRoot
 //
 // otherwise:
 //  <binDir> directory containing this executable (is also conf dir)
@@ -155,19 +155,19 @@ int appExitCode();
 //      /crash
 //      /data
 //      /log
-//      /web
+//      /web    - may be changed via app.xml/App/WebRoot
 
 const Path & appRootDir();      // application root
 const Path & appInitialDir();   // current directory when appRun was called
 const Path & appBinDir();       // directory containing this binary
-const Path & appConfigDir();
+const Path & appConfDir();
 const Path & appCrashDir();
 const Path & appDataDir();
 const Path & appLogDir();
 
 // False if file relative to root is not within the root path. This can happen
 // if file breaks out via ".." or is an absolute path.
-bool appConfigPath(
+bool appConfPath(
     Path * out,
     std::string_view file,
     bool createDirIfNotExist = true

@@ -128,7 +128,7 @@ void ConfigFile::monitor_UNLK(
         fileMonitor(s_hDir, relpath, this);
     } else {
         string fullpath;
-        fullpath = appConfigDir();
+        fullpath = appConfDir();
         fullpath += '/';
         fullpath += relpath;
         parseContent(fullpath, 0, {}, {});
@@ -169,7 +169,7 @@ void ConfigFile::parseContent(
     m_content = move(content);
     m_fullpath = fullpath;
     m_relpath = m_fullpath;
-    m_relpath.remove_prefix(appConfigDir().size() + 1);
+    m_relpath.remove_prefix(appConfDir().size() + 1);
 
     // call notifiers
     if (m_changes > 1 && appFlags().any(fAppWithFiles))
@@ -320,7 +320,7 @@ void Dim::iConfigInitialize() {
     s_context.appBaseName = appBaseName();
     s_context.appIndex = appIndex();
     if (appFlags().any(fAppWithFiles))
-        fileMonitorDir(&s_hDir, appConfigDir(), true);
+        fileMonitorDir(&s_hDir, appConfDir(), true);
 }
 
 
@@ -341,7 +341,7 @@ static bool getFullpath(Path * out, string_view file) {
     if (appFlags().any(fAppWithFiles)) {
         result = fileMonitorPath(out, s_hDir, file);
     } else {
-        result = appConfigPath(out, file, false);
+        result = appConfPath(out, file, false);
     }
     if (!result)
         logMsgError() << "File outside of configuration directory: " << file;
@@ -748,7 +748,7 @@ class JsonConfigs : public IWebAdminNotify {
 void JsonConfigs::onHttpRequest(unsigned reqId, HttpRequest & msg) {
     auto res = HttpResponse(kHttpStatusOk);
     auto bld = initResponse(&res, reqId, msg);
-    auto dir = appConfigDir();
+    auto dir = appConfDir();
     configWriteRules(&bld, "files");
     bld.end();
     httpRouteReply(reqId, move(res));

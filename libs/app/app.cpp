@@ -40,7 +40,6 @@ static Path s_confDir;
 static Path s_crashDir; // where to place crash dumps
 static Path s_dataDir;
 static Path s_logDir;   // where to place log files
-static Path s_webDir;
 
 
 /****************************************************************************
@@ -51,7 +50,7 @@ static Path s_webDir;
 
 //===========================================================================
 static Path makeAppDir(string_view path) {
-    auto out = appRootDir() / path;
+    auto out = s_rootDir / path;
     return out;
 }
 
@@ -120,33 +119,16 @@ void ConfigAppXml::onConfigChange(const XDocument & doc) {
 //===========================================================================
 static void initVars() {
     // Application name and version
-    fileGetCurrentDir(&s_initialDir);
     auto exeName = (Path) envExecPath();
     if (s_appBaseName.empty())
         s_appBaseName = exeName.stem();
     if (!s_appVer)
         s_appVer = envExecVersion();
-    if (s_appVer) {
-        Cli cli;
-        ostringstream hdr;
-        Time8601Str ds(envExecBuildTime());
-        auto verStr = toString(s_appVer);
-        hdr << s_appBaseName
-            << " v" << verStr
-            << " (" << ds.view().substr(0, 10) << ")";
-        cli.header(hdr.str())
-            .versionOpt(verStr, s_appBaseName);
-    }
-    s_appName = s_appBaseName;
-    if (s_appIndex > 1)
-        s_appName += toChars(s_appIndex);
-    s_appSvcName = s_appName;
-    if (s_groupIndex > 1) {
-        s_appSvcName += '.';
-        s_appSvcName += toChars(s_groupIndex);
-    }
+    s_appIndex = 1;
+    s_groupIndex = 1;
 
     // Directories
+    fileGetCurrentDir(&s_initialDir);
     s_binDir = exeName.parentPath();
     if (s_appFlags.any(fAppWithFiles) && s_binDir.stem() == "bin") {
         s_rootDir = s_binDir.parentPath();
@@ -158,7 +140,6 @@ static void initVars() {
     s_crashDir = makeAppDir("crash");
     s_dataDir = makeAppDir("data");
     s_logDir = makeAppDir("log");
-    s_webDir = makeAppDir("web");
 
     if (s_appFlags.any(fAppWithChdir))
         fileSetCurrentDir(s_rootDir);
@@ -171,11 +152,6 @@ static void initVars() {
 
 //===========================================================================
 static void initApp() {
-    iPlatformInitialize(PlatformInit::kBeforeAppVars);
-    if (s_appFlags.all(fAppWithLogs | fAppWithConsole))
-        logMonitor(consoleBasicLogger());
-    iFileInitialize();
-    initVars();
     iConfigInitialize();
     configMonitor("app.xml", &s_appXml);
     if (s_appFlags.any(fAppWithLogs))
@@ -189,8 +165,6 @@ static void initApp() {
     iHttpRouteInitialize();
     iWebAdminInitialize();
 
-    taskPushEvent(s_appTasks.data(), s_appTasks.size());
-
     {
         lock_guard lk{s_runMut};
         if (s_runMode == kRunStopping) {
@@ -202,6 +176,8 @@ static void initApp() {
             s_runMode = kRunRunning;
         }
     }
+
+    taskPushEvent(s_appTasks.data(), s_appTasks.size());
 
     Cli cli;
     if (!cli.exec()) {
@@ -269,26 +245,9 @@ int Dim::appRun(
     s_appFlags = flags;
     s_appTasks.clear();
 
-    Cli cli;
-    if (!s_appFlags.any(fAppWithService)) {
-        s_appIndex = 1;
-        s_groupIndex = 1;
-    } else {
-        cli.opt(&s_appIndex, "app-index", 1)
-            .desc("Identifies service when multiple instances "
-                "are configured.");
-        cli.opt(&s_groupIndex, "group-index", 1)
-            .desc("Identifies service group when there are multiple.");
-    }
-
-    // The command line will be validated later by the application, right now
-    // we just need the appIndex and groupIndex to process the configuration.
-    auto parseOk = cli.parse(argc, argv);
-
     s_appVer = ver;
     s_appBaseName = baseName;
     s_appName.clear();
-    s_webDir.clear();
 
     // Finish initialization and start.
     iPlatformInitialize(PlatformInit::kBeforeAll);
@@ -298,6 +257,44 @@ int Dim::appRun(
         logDefaultMonitor(consoleBasicLogger());
     iTaskInitialize();
     iTimerInitialize();
+    iPlatformInitialize(PlatformInit::kBeforeAppVars);
+    if (s_appFlags.all(fAppWithLogs | fAppWithConsole))
+        logMonitor(consoleBasicLogger());
+    iFileInitialize();
+    initVars();
+
+    Cli cli;
+    if (s_appVer) {
+        ostringstream hdr;
+        Time8601Str ds(envExecBuildTime());
+        auto verStr = toString(s_appVer);
+        hdr << s_appBaseName
+            << " v" << verStr
+            << " (" << ds.view().substr(0, 10) << ")";
+        cli.header(hdr.str())
+            .versionOpt(verStr, s_appBaseName);
+    }
+    if (s_appFlags.any(fAppWithService)) {
+        cli.opt(&s_appIndex, "app-index", 1)
+            .desc("Identifies service when multiple instances "
+                "are configured.");
+        cli.opt(&s_groupIndex, "group-index", 1)
+            .desc("Identifies service group when there are multiple.");
+    }
+
+    // The command line can be validated later by the application during the
+    // cli.exec() call in initApp(), right now we just need appIndex and
+    // groupIndex to process the configuration.
+    auto parseOk = cli.parse(argc, argv);
+
+    s_appName = s_appBaseName;
+    if (s_appIndex > 1)
+        s_appName += toChars(s_appIndex);
+    s_appSvcName = s_appName;
+    if (s_groupIndex > 1) {
+        s_appSvcName += '.';
+        s_appSvcName += toChars(s_groupIndex);
+    }
 
     if (parseOk) {
         taskPushEvent(initApp);
@@ -335,6 +332,7 @@ int Dim::appRun(
 
 //===========================================================================
 unsigned Dim::appIndex() {
+    assert(!s_appName.empty());
     return s_appIndex;
 }
 
@@ -362,6 +360,7 @@ const string & Dim::appName() {
 
 //===========================================================================
 unsigned Dim::appGroupIndex() {
+    assert(!s_appName.empty());
     return s_groupIndex;
 }
 
@@ -395,7 +394,7 @@ const Path & Dim::appBinDir() {
 }
 
 //===========================================================================
-const Path & Dim::appConfigDir() {
+const Path & Dim::appConfDir() {
     assert(!s_appName.empty());
     return s_confDir;
 }
@@ -442,8 +441,8 @@ bool Dim::appCliShutdownSignaled() {
 }
 
 //===========================================================================
-bool Dim::appConfigPath(Path * out, string_view file, bool cine) {
-    return !fileChildPath(out, appConfigDir(), file, cine);
+bool Dim::appConfPath(Path * out, string_view file, bool cine) {
+    return !fileChildPath(out, appConfDir(), file, cine);
 }
 
 //===========================================================================
