@@ -305,7 +305,7 @@
 # tools/docgen/intern.h
 # tools/docgen/pch.cpp
 # tools/docgen/pch.h
-# tools/docgen/resupd.cmdline
+# tools/docgen/resupd.args
 # tools/docgen/samptest.cpp
 # tools/docgen/schema.xsd
 # tools/docgen/schema.xsdgen.xml
