@@ -43,7 +43,7 @@ struct HttpRouteInfo {
     // non-empty names.
     std::string_view name;
     std::string_view desc;
-    std::string_view renderPath;
+    std::string_view renderPath;    // Alias for rendering in web console.
 
     // Values not set by clients.
     unsigned matched = 0;
