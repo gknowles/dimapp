@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2025.
+// Copyright Glen Knowles 2016 - 2026.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // pargen.cpp - pargen
@@ -15,7 +15,7 @@ using namespace Dim;
 *
 ***/
 
-const VersionInfo kVersion = { 2, 2, 1 };
+const VersionInfo kVersion = { 2, 2, 2 };
 
 
 /****************************************************************************

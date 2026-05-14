@@ -195,7 +195,6 @@ using namespace Dim::Detail;
 //===========================================================================
 // Parser function covering:
 //  - 1777 states
-[[gsl::suppress(bounds)]]
 bool XmlBaseParser::parse (const char src[]) {
     const char * ptr = src;
     unsigned char ch;
@@ -45430,7 +45429,6 @@ STATE_5077:
 //===========================================================================
 // Parser function covering:
 //  - 36 states
-[[gsl::suppress(bounds)]]
 bool XmlBaseParser::stateCp (const char *& ptr) {
     const char * last = nullptr;
     unsigned char ch;
@@ -46083,7 +46081,6 @@ STATE_74:
 //===========================================================================
 // Parser function covering:
 //  - 604 states
-[[gsl::suppress(bounds)]]
 bool XmlBaseParser::stateElementTail (const char *& ptr) {
     const char * last = nullptr;
     unsigned char ch;

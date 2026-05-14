@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2025.
+// Copyright Glen Knowles 2016 - 2026.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // write.cpp - pargen
@@ -652,7 +652,6 @@ static void writeFunction(
 // Parser function covering:
 //  - )"
        << stateSet.size() + 1 << R"( states
-[[gsl::suppress(bounds)]]
 bool )" << parserClass
        << "::";
     if (!root) {

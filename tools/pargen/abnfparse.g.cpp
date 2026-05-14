@@ -113,7 +113,6 @@
 //===========================================================================
 // Parser function covering:
 //  - 303 states
-[[gsl::suppress(bounds)]]
 bool AbnfParser::parse (const char src[]) {
     const char * ptr = src;
     unsigned char ch;
@@ -8638,7 +8637,6 @@ STATE_639:
 //===========================================================================
 // Parser function covering:
 //  - 141 states
-[[gsl::suppress(bounds)]]
 bool AbnfParser::stateGroupTail (const char *& ptr) {
     const char * last = nullptr;
     unsigned char ch;

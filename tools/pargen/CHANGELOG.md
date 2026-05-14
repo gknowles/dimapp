@@ -1,5 +1,5 @@
 ﻿<!--
-Copyright Glen Knowles 2025.
+Copyright Glen Knowles 2025 - 2026.
 Distributed under the Boost Software License, Version 1.0.
 -->
 
@@ -9,6 +9,9 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
+
+## pargen 2.2.2 (2026-05-14)
+- Changed - Remove gsl::suppress() from generated code
 
 ## pargen 2.2.1 (2022-12-27)
 - Fixed - Race in log thread accessing log data owned by other thread
