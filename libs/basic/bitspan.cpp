@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2025.
+// Copyright Glen Knowles 2017 - 2026.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // bitview.cpp - dim basic
@@ -125,41 +125,37 @@ constexpr static T combine(T dst, T src, U mask) {
 }
 
 //===========================================================================
+// Only load some of the most significant bytes.
 static uint64_t ntoh64(const void * ptr, size_t bytes) {
     assert(bytes <= sizeof uint64_t);
     uint64_t out = 0;
     memcpy(&out, ptr, bytes);
-    if constexpr (std::endian::native == std::endian::little)
+    if constexpr (endian::native == endian::little)
         out = byteswap(out);
     return out;
 }
 
 //===========================================================================
+// Only load some of the most significant bytes.
+static uint64_t ntoh64(const byte ** src, size_t bytes) {
+    auto ptr = *src;
+    *src += bytes;
+    return ntoh64(ptr, bytes);
+}
+
+//===========================================================================
+// Only load some of the least significant bytes.
 static uint64_t ntoh64l(const void * ptr, size_t bytes) {
-    assert(bytes <= sizeof uint64_t);
-    uint64_t out = 0;
-    memcpy((char *) &out + sizeof out - bytes, ptr, bytes);
-    if constexpr (std::endian::native == std::endian::little)
-        out = byteswap(out);
-    return out;
+    return ntoh64(ptr, bytes) >> 8 * (8 - bytes);
 }
 
 //===========================================================================
 // Only store some of the most significant bytes.
 static void hton64(void * ptr, uint64_t val, size_t bytes) {
     assert(bytes <= sizeof val);
-    if constexpr (std::endian::native == std::endian::little)
+    if constexpr (endian::native == endian::little)
         val = byteswap(val);
     memcpy(ptr, &val, bytes);
-}
-
-//===========================================================================
-// Only store some of the *least* significant bytes.
-static void hton64l(void * ptr, uint64_t val, size_t bytes) {
-    assert(bytes <= sizeof val);
-    if constexpr (std::endian::native == std::endian::little)
-        val = byteswap(val);
-    memcpy(ptr, (char *) &val + sizeof val - bytes, bytes);
 }
 
 //===========================================================================
@@ -437,7 +433,7 @@ static void bitcpy64(
         dval = combine(dval, val, mask);
         sqpos = dqpos - sqpos;
     }
-    hton64l(dst, dval, 8 - daddr);
+    hton64(dst, dval << 8 * daddr, 8 - daddr);
     dst += 8 - daddr;
     cnt -= 64 - dqpos;
     // Copy to middle qwords of dst.
@@ -583,6 +579,173 @@ void IBitView::replace(
         erase(dst, dsize, dpos + scnt, dcnt - scnt);
     }
     copy(dst, dpos, src, spos, scnt);
+}
+
+//===========================================================================
+static size_t mismatch(unsigned char a, unsigned char b) {
+    // Xor a with b and look for first set bit.
+    unsigned char cnt = a ^ b;
+    return countl_zero(cnt);
+}
+
+//===========================================================================
+static size_t mismatch(uint64_t a, uint64_t b) {
+    // Xor a with b and look for first set bit.
+    uint64_t cnt = a ^ b;
+    return countl_zero(cnt);
+}
+
+//===========================================================================
+// Bytes of a and b are bit aligned with each other, direct byte comparisons
+// can be used (no shifting required).
+static size_t mismatchAligned(
+    const void * ra,
+    size_t apos,
+    const void * rb,
+    size_t bpos,
+    size_t rcnt
+) {
+    auto a = (const unsigned char *) ra + apos / 8;
+    auto b = (const unsigned char *) rb + bpos / 8;
+    auto pos = apos % 8;
+    assert(pos == bpos % 8);
+    auto cnt = rcnt;
+    if (!cnt) {
+        // No bits to compare.
+        return 0;
+    }
+    if (pos) {
+        // Starts with partial byte.
+        unsigned char aval = *a << pos;
+        unsigned char bval = *b << pos;
+        auto matched = ::mismatch(aval, bval);
+        if (pos + cnt <= 8) {
+            // Only comparing bits within a single byte.
+            return min(matched, cnt);
+        }
+        if (matched < 8 - pos)
+            return matched;
+        a += 1;
+        b += 1;
+        cnt -= 8 - pos;
+        assert(cnt);
+    }
+    auto bytes = cnt / 8;   // number of full bytes to check
+    auto [va, vb] = std::mismatch(a, a + bytes, b);
+    size_t matched = 0;
+    if (va < a + bytes) {
+        matched = ::mismatch(*va, *vb);
+    } else {
+        if (cnt % 8 == 0)
+            return rcnt;
+        matched = ::mismatch(*va, *vb);
+        matched = min(matched, cnt % 8);
+    }
+    cnt = 8 * (va - a) + matched;
+    if (!pos)
+        return cnt;
+    return cnt + 8 - pos;
+}
+
+//===========================================================================
+// static
+size_t IBitView::mismatch(
+    const void * ra,
+    size_t rapos,   // Offset from a of bits to compare.
+    size_t acnt,    // Number of bits, starting at apos, to compare.
+    const void * rb,
+    size_t rbpos,   // Offset from b of bits to compare.
+    size_t bcnt     // Number of bits, starting at bpos to compare.
+) {
+    auto cnt = min(acnt, bcnt);
+    auto apos = rapos % 8;
+    auto bpos = rbpos % 8;
+    if (apos == bpos) {
+        // Bytes of a and b are bit aligned with each other, direct byte
+        // comparisons can be used (no shifting required).
+        return mismatchAligned(ra, rapos, rb, rbpos, cnt);
+    }
+
+    // Starts at unaligned bits.
+    auto a = (const byte *) ra + rapos / 8;
+    auto b = (const byte *) rb + rbpos / 8;
+    apos += 8 * ((uintptr_t) a) % 8;
+    bpos += 8 * ((uintptr_t) b) % 8;
+    if (apos > bpos) {
+        // Ensure that a always has more (or equal) bits in its first partial
+        // 64bit than b has in its.
+        swap(apos, bpos);
+        swap(a, b);
+    }
+
+    if (apos + cnt <= 64) {
+        // Comparing bits of 8 byte chunk.
+        assert(bpos < 64);
+        auto aval = ::ntoh64(a, (apos + cnt + 7) / 8) << apos;
+        uint64_t bval;
+        auto bvalcnt = (bpos + cnt + 7) / 8;
+        if (bvalcnt <= 8) {
+            bval = ::ntoh64(b, bvalcnt) << bpos;
+        } else {
+            // Comparing with bits of two 8 byte chunks.
+            bval = ntoh64(b) << bpos;
+            auto b2 = ::ntoh64(b + 8, bvalcnt - 8) >> (64 - bpos);
+            bval |= b2;
+        }
+        auto pos = ::mismatch(aval, bval);
+        return min(pos, cnt);
+    }
+
+    // Multi-qword starting at unaligned bits and maybe unaligned bytes too.
+
+    //   83 bits             76 bits           12 bits
+    //   1fff ff..ff fc   -> 3f ff..ff fc   -> 3f fc
+    //     7f ff..ff fff  ->    ff..ff fff  ->    fff
+    //   ^apos (51)          ^xpos (58)
+    //     ^bpos (57)
+    auto aval = ::ntoh64(&a, 8 - apos / 8);
+    auto bval = ::ntoh64(&b, 8 - bpos / 8);
+    auto pos = ::mismatch(aval << apos, bval << bpos);
+    if (pos < 64 - bpos)
+        return pos;
+    auto xpos = apos + 64 - bpos;
+    auto i = 64 - bpos;
+    for (; i + 64 <= cnt; i += 64) {
+        auto a1 = aval;
+        aval = ntoh64(&a);
+        bval = ntoh64(&b);
+        auto ax = (a1 << xpos) | (aval >> (64 - xpos));
+        pos = ::mismatch(ax, bval);
+        if (pos < 64)
+            return i + pos;
+    }
+    if (i == cnt)
+        return cnt;
+    auto a1 = aval;
+    auto bytes = (cnt - i - (64 - xpos) + 7) / 8;
+    aval = ::ntoh64(a, bytes);
+    bytes = (cnt - i + 7) / 8;
+    bval = ::ntoh64(b, bytes);
+    auto ax = (a1 << xpos) | (aval >> (64 - xpos));
+    pos = ::mismatch(ax, bval);
+    if (pos < cnt - i)
+        return i + pos;
+    return cnt;
+}
+
+//===========================================================================
+// static
+size_t IBitView::rmismatch(
+    const void * ra,
+    size_t rapos,   // Offset from a of bits to compare.
+    size_t acnt,    // Number of bits, starting at apos, to compare.
+    const void * rb,
+    size_t rbpos,   // Offset from b of bits to compare.
+    size_t bcnt     // Number of bits, starting at bpos to compare.
+) {
+    // Starts at unaligned bits.
+    assert(!"mismatch: Not implemented for unaligned buffers.");
+    return 0;
 }
 
 //===========================================================================

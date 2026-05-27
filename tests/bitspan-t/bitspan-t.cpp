@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2018 - 2025.
+// Copyright Glen Knowles 2018 - 2026.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // bitspan-t.cpp - dim test bitspan
@@ -123,15 +123,15 @@ IN_KEY:
 *
 ***/
 
-struct CopyTestMem {
+struct TestMem {
     string raw;
     size_t pos;
     size_t align;
 };
 struct CopyTest {
     size_t cnt;
-    CopyTestMem dst;
-    CopyTestMem src;
+    TestMem dst;
+    TestMem src;
     string out;
     source_location sloc = source_location::current();
 };
@@ -142,14 +142,14 @@ enum TestMode {
 };
 
 //===========================================================================
-static bool execTest(const CopyTest & t, TestMode mode = kNormal) {
+static bool test(const CopyTest & t, TestMode mode = kNormal) {
     string src, dst, out;
     if (!hexToBytes(&src, expand(t.src.raw))
         || !hexToBytes(&dst, expand(t.dst.raw))
         || !hexToBytes(&out, expand(t.out))
-        ) {
+    ) {
         logMsgError() << "Line " << t.sloc.line()
-            << ": Invalid test definition.";
+            << ": Invalid copy test definition.";
         return false;
     }
     if (mode == kInverted) {
@@ -237,8 +237,114 @@ static void copyTests() {
         //        "##" },
     };
     for (auto&& t : tests) {
-        execTest(t);
-        execTest(t, kInverted);
+        test(t);
+        test(t, kInverted);
+    }
+}
+
+struct MismatchTest {
+    size_t cnt;
+    TestMem a;
+    TestMem b;
+    size_t out;
+    source_location sloc = source_location::current();
+};
+
+//===========================================================================
+static bool test(const MismatchTest & t) {
+    string a, b;
+    if (!hexToBytes(&a, expand(t.a.raw))
+        || !hexToBytes(&b, expand(t.b.raw))
+    ) {
+        logMsgError() << "Line " << t.sloc.line()
+            << ": Invalid mismatch test definition.";
+        return false;
+    }
+    a.insert(0, t.a.align, '\0');
+    auto adat = a.data() + t.a.align;
+    b.insert(0, t.b.align, '\0');
+    auto bdat = b.data() + t.b.align;
+    auto pre = BitSpan::mismatch(adat, t.a.pos, t.cnt, bdat, t.b.pos, t.cnt);
+    if (pre != t.out) {
+        logMsgError() << "Line " << t.sloc.line()
+            << ": output " << pre << ", expected " << t.out;
+    }
+    return true;
+}
+
+//===========================================================================
+static void mistestStep(
+    BitSpan & a,
+    size_t apos,
+    BitSpan & b,
+    size_t bpos,
+    size_t cnt,
+    size_t pos
+) {
+    b.reset(bpos + pos);
+    auto adat = a.data();
+    auto bdat = b.data();
+    auto pre = BitSpan::mismatch(adat, apos, cnt, bdat, bpos, cnt);
+    if (pre != pos) {
+        logMsgError() << "Line " << __LINE__ << " ( "
+            << "{ " << apos << ", " << cnt << " }, "
+            << "{ " << bpos << ", " << cnt << " } diff @" << pos
+            << " ): output " << pre << ", expected " << pos;
+    }
+    b.set(bpos + pos);
+}
+
+//===========================================================================
+[[maybe_unused]] static void mistest(
+    BitSpan & a,
+    size_t apos,
+    BitSpan & b,
+    size_t bpos,
+    size_t cnt,
+    size_t pos
+) {
+    a.reset();
+    a.set(apos, cnt);
+    b.reset();
+    b.set(bpos, cnt);
+    mistestStep(a, apos, b, bpos, cnt, pos);
+}
+
+//===========================================================================
+static void mismatchTests() {
+    MismatchTest tests[] = {
+        { 0, {"00", 2 }, {"00", 4 }, 0 },
+        { 1, {"00", 0 }, {"00", 4 }, 1 },
+        { 1, {"00", 0 }, {"08", 4 }, 0 },
+        { 3, {"00", 0 }, {"00", 4 }, 3 },
+        { 3, {"00", 0 }, {"02", 4 }, 2 },
+        { 3, {"00", 4 }, {"00", 2 }, 3 },
+        { 3, {"00", 4 }, {"10", 2 }, 1 },
+    };
+    for (auto&& t : tests)
+        test(t);
+
+    uint64_t da[4];
+    uint64_t db[4];
+    BitSpan a(da, size(da));
+    BitSpan b(db, size(db));
+
+    mistest(a, 1, b, 1,  8, 7);
+    mistest(a, 0, b, 1, 65, 64);
+    mistest(a, 0, b, 1, 65, 0);
+    mistest(a, 0, b, 1, 64, 1);
+
+    for (size_t oa = 0; oa < 64; ++oa) {
+        for (size_t ob = 0; ob < 64; ++ob) {
+            for (size_t cnt = 0; cnt < 3 * 64; ++cnt) {
+                a.reset();
+                a.set(oa, cnt);
+                b.reset();
+                b.set(ob, cnt);
+                for (size_t pos = 0; pos <= cnt; ++pos)
+                    mistestStep(a, oa, b, ob, cnt, pos);
+            }
+        }
     }
 }
 
@@ -321,6 +427,7 @@ static void findTests() {
 
 //===========================================================================
 static void app(Cli & cli) {
+    mismatchTests();
     copyTests();
     setBitTests();
     findTests();

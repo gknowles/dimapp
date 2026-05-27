@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2017 - 2025.
+// Copyright Glen Knowles 2017 - 2026.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // bitspan.h - dim basic
@@ -53,6 +53,26 @@ public:
         const void * src,
         size_t spos,    // Offset from src of bits to insert.
         size_t scnt     // Number of bits used to replacement of the old bits.
+    );
+    // Find position of first mismatch, in bits. This is the same as the length
+    // of the common prefix.
+    static size_t mismatch(
+        const void * a,
+        size_t apos,    // Offset from a of bits to compare.
+        size_t acnt,    // Number of bits, starting at apos, to compare.
+        const void * b,
+        size_t bpos,    // Offset from b of bits to compare.
+        size_t bcnt     // Number of bits, starting at bpos to compare.
+    );
+    // Find position of last mismatch, measured from the tail, in bits. Can
+    // also be thought of as the length of the common suffix.
+    static size_t rmismatch(
+        const void * a,
+        size_t apos,    // Offset from a of bits to compare.
+        size_t acnt,    // Number of bits, starting at apos, to compare.
+        const void * b,
+        size_t bpos,    // Offset from b of bits to compare.
+        size_t bcnt     // Number of bits, starting at bpos to compare.
     );
 
 public:
