@@ -614,6 +614,7 @@ static size_t mismatchAligned(
         // No bits to compare.
         return 0;
     }
+    size_t precnt = 0;
     if (pos) {
         // Starts with partial byte.
         unsigned char aval = *a << pos;
@@ -625,9 +626,10 @@ static size_t mismatchAligned(
         }
         if (matched < 8 - pos)
             return matched;
+        precnt = 8 - pos;
         a += 1;
         b += 1;
-        cnt -= 8 - pos;
+        cnt -= precnt;
         assert(cnt);
     }
     auto bytes = cnt / 8;   // number of full bytes to check
@@ -641,10 +643,8 @@ static size_t mismatchAligned(
         matched = ::mismatch(*va, *vb);
         matched = min(matched, cnt % 8);
     }
-    cnt = 8 * (va - a) + matched;
-    if (!pos)
-        return cnt;
-    return cnt + 8 - pos;
+    cnt = precnt + 8 * (va - a) + matched;
+    return cnt;
 }
 
 //===========================================================================
