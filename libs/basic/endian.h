@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2016 - 2025.
+// Copyright Glen Knowles 2016 - 2026.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // endian.h - dim basic
@@ -21,7 +21,7 @@ namespace Dim {
 ***/
 
 //===========================================================================
-// Network to host endian
+// Network (big endian) to host endian
 //===========================================================================
 constexpr uint16_t ntoh16(uint16_t val) {
     if constexpr (std::endian::native == std::endian::big) {
@@ -50,7 +50,7 @@ constexpr uint64_t ntoh64(uint64_t val) {
 }
 
 //===========================================================================
-// Network to host endian from buffer
+// Network (big endian) to host endian from buffer
 //===========================================================================
 constexpr uint8_t ntoh8(const void * src) {
     return *static_cast<const uint8_t *>(src);
@@ -146,7 +146,7 @@ constexpr double ntohf64(const std::byte ** src) {
 }
 
 //===========================================================================
-// Host to network endian
+// Host endian to network (big endian)
 //===========================================================================
 constexpr uint16_t hton16(uint16_t val) {
     if constexpr (std::endian::native == std::endian::big) {
@@ -175,7 +175,7 @@ constexpr uint64_t hton64(uint64_t val) {
 }
 
 //===========================================================================
-// Host to network endian in buffer
+// Host endian to network (big endian) in buffer
 //===========================================================================
 constexpr std::byte * hton16(void * out, uint16_t val) {
     auto ptr = static_cast<uint16_t *>(out);
