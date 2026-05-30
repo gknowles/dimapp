@@ -1206,7 +1206,7 @@ static void genSite(Config * out, unsigned phase) {
             logMsgInfo() << "Website generated successfully.";
         }
 
-        logPauseStopwatch();
+        logStopwatch();
         return appSignalShutdown(EX_OK);
     }
 
