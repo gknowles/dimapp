@@ -72,7 +72,7 @@ public:
     size_t getSockInfos(std::vector<SocketInfo> * out, size_t limit) const;
 
     virtual bool listening() const = 0;
-    virtual void setAddresses(const SockAddr * addrs, size_t count) = 0;
+    virtual void setAddresses(const SockAddr addrs[], size_t count) = 0;
     virtual bool onShutdown(bool firstTry) = 0;
 
     // Inherited via IConfigNotify

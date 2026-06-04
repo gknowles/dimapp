@@ -245,7 +245,7 @@ void Dim::sockMgrSetInactiveTimeout(SockMgrHandle h, Duration timeout) {
 //===========================================================================
 void Dim::sockMgrSetAddresses(
     SockMgrHandle h,
-    const SockAddr * addrs,
+    const SockAddr addrs[],
     size_t count
 ) {
     auto mgr = s_mgrs.find(h);

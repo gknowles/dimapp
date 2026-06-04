@@ -279,7 +279,7 @@ void ConnectManager::destroy(ConnMgrSocket & sock) {
 }
 
 //===========================================================================
-void ConnectManager::setAddresses(const SockAddr * addrs, size_t count) {
+void ConnectManager::setAddresses(const SockAddr addrs[], size_t count) {
     vector<SockAddr> endpts{addrs, addrs + count};
     ranges::sort(endpts);
     ranges::sort(m_addrs);

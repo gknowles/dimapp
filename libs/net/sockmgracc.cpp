@@ -143,7 +143,7 @@ AcceptManager::AcceptManager(
 }
 
 //===========================================================================
-void AcceptManager::setAddresses(const SockAddr * addrs, size_t count) {
+void AcceptManager::setAddresses(const SockAddr addrs[], size_t count) {
     vector<SockAddr> saddrs{addrs, addrs + count};
     ranges::sort(saddrs);
     ranges::sort(m_addrs);
