@@ -137,6 +137,7 @@ static uint64_t ntoh64(const void * ptr, size_t bytes) {
 
 //===========================================================================
 // Only load some of the most significant bytes.
+[[maybe_unused]]
 static uint64_t ntoh64(const byte ** src, size_t bytes) {
     auto ptr = *src;
     *src += bytes;
@@ -589,15 +590,9 @@ static size_t mismatch(unsigned char a, unsigned char b) {
 }
 
 //===========================================================================
-static size_t mismatch(uint64_t a, uint64_t b) {
-    // Xor a with b and look for first set bit.
-    uint64_t cnt = a ^ b;
-    return countl_zero(cnt);
-}
-
-//===========================================================================
 // Bytes of a and b are bit aligned with each other, direct byte comparisons
 // can be used (no shifting required).
+[[maybe_unused]]
 static size_t mismatchAligned(
     const void * ra,
     size_t apos,
@@ -648,6 +643,13 @@ static size_t mismatchAligned(
 }
 
 //===========================================================================
+static size_t mismatch(uint64_t a, uint64_t b) {
+    // Xor a with b and look for first set bit.
+    uint64_t cnt = a ^ b;
+    return countl_zero(cnt);
+}
+
+//===========================================================================
 // static
 size_t IBitView::mismatch(
     const void * ra,
@@ -663,14 +665,20 @@ size_t IBitView::mismatch(
     if (apos == bpos) {
         // Bytes of a and b are bit aligned with each other, direct byte
         // comparisons can be used (no shifting required).
-        return mismatchAligned(ra, rapos, rb, rbpos, cnt);
+        //return mismatchAligned(ra, rapos, rb, rbpos, cnt);
     }
 
-    // Starts at unaligned bits.
+    // Starts at unaligned bits. Align a and b to nearest containing addresses
+    // and adjust apos and bpos to relative to the new addresses.
     auto a = (const byte *) ra + rapos / 8;
+    auto adptr = (uintptr_t) a % 8;
+    a -= adptr;
+    apos += 8 * adptr;
     auto b = (const byte *) rb + rbpos / 8;
-    apos += 8 * ((uintptr_t) a) % 8;
-    bpos += 8 * ((uintptr_t) b) % 8;
+    auto bdptr = (uintptr_t) b % 8;
+    b -= bdptr;
+    bpos += 8 * bdptr;
+
     if (apos > bpos) {
         // Ensure that a always has more (or equal) bits in its first partial
         // 64bit than b has in its.
@@ -679,18 +687,16 @@ size_t IBitView::mismatch(
     }
 
     if (apos + cnt <= 64) {
-        // Comparing bits of 8 byte chunk.
-        assert(bpos < 64);
-        auto aval = ::ntoh64(a, (apos + cnt + 7) / 8) << apos;
-        uint64_t bval;
-        auto bvalcnt = (bpos + cnt + 7) / 8;
-        if (bvalcnt <= 8) {
-            bval = ::ntoh64(b, bvalcnt) << bpos;
+        auto aval = ntoh64(a) << apos;
+        auto bval = ntoh64(b) << bpos;
+        if (bpos + cnt <= 64) {
+            // -aaaaa--
+            // --aaaaa-
         } else {
-            // Comparing with bits of two 8 byte chunks.
-            bval = ntoh64(b) << bpos;
-            auto b2 = ::ntoh64(b + 8, bvalcnt - 8) >> (64 - bpos);
-            bval |= b2;
+            // -bbaaa--
+            // ------bb aaa-----
+            auto b2 = ntoh64(b + 8);
+            bval |= b2 >> (64 - bpos);
         }
         auto pos = ::mismatch(aval, bval);
         return min(pos, cnt);
@@ -698,39 +704,62 @@ size_t IBitView::mismatch(
 
     // Multi-qword starting at unaligned bits and maybe unaligned bytes too.
 
-    //   83 bits             76 bits           12 bits
-    //   1fff ff..ff fc   -> 3f ff..ff fc   -> 3f fc
-    //     7f ff..ff fff  ->    ff..ff fff  ->    fff
-    //   ^apos (51)          ^xpos (58)
-    //     ^bpos (57)
-    auto aval = ::ntoh64(&a, 8 - apos / 8);
-    auto bval = ::ntoh64(&b, 8 - bpos / 8);
+    // -0011111 11122222 22233333 33------
+    // ------00 11111111 22222222 3333333-
+    //  ^apos      ^xpos
+    //       ^bpos
+
+    auto aval = ntoh64(&a);
+    auto bval = ntoh64(&b);
     auto pos = ::mismatch(aval << apos, bval << bpos);
     if (pos < 64 - bpos)
         return pos;
     auto xpos = apos + 64 - bpos;
     auto i = 64 - bpos;
+
+    if (xpos == 64) {
+        // -----000 11111111 22222222 33333---
+        // -----000 11111111 22222222 33333---
+        for (; i <= cnt; i += 64) {
+            aval = ntoh64(&a);
+            bval = ntoh64(&b);
+            pos = ::mismatch(aval, bval);
+            if (pos < 64)
+                return min(i + pos, cnt);
+        }
+        return cnt;
+    }
+
     for (; i + 64 <= cnt; i += 64) {
-        auto a1 = aval;
-        aval = ntoh64(&a);
+        auto a2 = ntoh64(&a);
+        auto ax = (aval << xpos) | (a2 >> (64 - xpos));
         bval = ntoh64(&b);
-        auto ax = (a1 << xpos) | (aval >> (64 - xpos));
         pos = ::mismatch(ax, bval);
         if (pos < 64)
             return i + pos;
+        aval = a2;
     }
-    if (i == cnt)
-        return cnt;
-    auto a1 = aval;
-    auto bytes = (cnt - i - (64 - xpos) + 7) / 8;
-    aval = ::ntoh64(a, bytes);
-    bytes = (cnt - i + 7) / 8;
-    bval = ::ntoh64(b, bytes);
-    auto ax = (a1 << xpos) | (aval >> (64 - xpos));
-    pos = ::mismatch(ax, bval);
-    if (pos < cnt - i)
-        return i + pos;
-    return cnt;
+    if (i + 64 - xpos < cnt) {
+        // -0011111 11122222 22233333 33------
+        // ------00 11111111 22222222 3333333-
+        auto a2 = ntoh64(&a);
+        aval = (aval << xpos) | (a2 >> (64 - xpos));
+    } else {
+        // -0011111 11122222 22233333 33344---
+        // ------00 11111111 22222222 33333333 44------
+        aval = (aval << xpos);
+    }
+    bval = ntoh64(&b);
+    pos = ::mismatch(aval, bval);
+    return min(i + pos, cnt);
+}
+
+//===========================================================================
+[[maybe_unused]]
+static size_t rmismatch(uint64_t a, uint64_t b) {
+    // Xor a with b and count the number of tailing zero bits.
+    uint64_t cnt = a ^ b;
+    return countr_zero(cnt);
 }
 
 //===========================================================================
@@ -743,8 +772,55 @@ size_t IBitView::rmismatch(
     size_t rbpos,   // Offset from b of bits to compare.
     size_t bcnt     // Number of bits, starting at bpos to compare.
 ) {
-    // Starts at unaligned bits.
-    assert(!"mismatch: Not implemented for unaligned buffers.");
+    auto cnt = min(acnt, bcnt);
+
+    // Bit offsets, as measured from the end of the last byte of each range.
+    auto apos = 7 - (rapos + acnt) % 8;
+    auto bpos = 7 - (rbpos + bcnt) % 8;
+
+    // Address of last byte of each range.
+    auto a = (const byte *) ra + (rapos + acnt) / 8;    // addr of end of a
+    auto b = (const byte *) rb + (rbpos + bcnt) / 8;    // addr of end of b
+
+    // Adjust positions to be offset of end, as measured from the end of last
+    // qword of range when extended to even qword boundary.
+    auto adptr = (uintptr_t) a % 8;
+    a -= adptr;
+    apos += 56 - 8 * adptr;   // offset from end
+    auto bdptr = (uintptr_t) b % 8;
+    b -= bdptr;
+    bpos += 56 - 8 * bdptr;
+
+    if (apos > bpos) {
+        // Ensure that a never has more bits in its last partial 64bit than b
+        // has in its.
+        swap(apos, bpos);
+        swap(a, b);
+    }
+    if (apos + cnt <= 64) {
+        // Load exactly one qword to get aval.
+        auto aval = ntoh64(a) >> apos;
+        auto bval = ntoh64(b) >> bpos;
+        if (bpos + cnt <= 64) {
+            // Exactly one qword to get bval.
+        } else {
+            // Need two qwords to get bval.
+            auto b2 = ntoh64(b - 8);
+            bval |= b2 << (64 - bpos);
+        }
+        auto pos = ::rmismatch(aval, bval);
+        return min(pos, cnt);
+    }
+
+    // Multi-qword starting at unaligned bits and maybe unaligned bytes too.
+    auto aval = ntoh64(a);
+    auto bval = ntoh64(b);
+    auto pos = ::rmismatch(aval >> apos, bval >> bpos);
+    if (pos < 64 - bpos)
+        return pos;
+    a -= 8;
+    b -= 8;
+
     return 0;
 }
 
