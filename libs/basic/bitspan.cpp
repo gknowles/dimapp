@@ -773,17 +773,18 @@ size_t IBitView::rmismatch(
     size_t bcnt     // Number of bits, starting at bpos to compare.
 ) {
     auto cnt = min(acnt, bcnt);
+    if (!cnt)
+        return 0;
 
     // Bit offsets, as measured from the end of the last byte of each range.
-    auto apos = 7 - (rapos + acnt) % 8;
-    auto bpos = 7 - (rbpos + bcnt) % 8;
+    auto apos = 7 - (rapos + acnt - 1) % 8;
+    auto bpos = 7 - (rbpos + bcnt - 1) % 8;
 
     // Address of last byte of each range.
-    auto a = (const byte *) ra + (rapos + acnt) / 8;    // addr of end of a
-    auto b = (const byte *) rb + (rbpos + bcnt) / 8;    // addr of end of b
+    auto a = (const byte *) ra + (rapos + acnt - 1) / 8; // last byte of a
+    auto b = (const byte *) rb + (rbpos + bcnt - 1) / 8; // last byte of b
 
-    // Adjust positions to be offset of end, as measured from the end of last
-    // qword of range when extended to even qword boundary.
+    // Adjust addresses to last aligned qword containing bits of each range.
     auto adptr = (uintptr_t) a % 8;
     a -= adptr;
     apos += 56 - 8 * adptr;   // offset from end
@@ -818,10 +819,40 @@ size_t IBitView::rmismatch(
     auto pos = ::rmismatch(aval >> apos, bval >> bpos);
     if (pos < 64 - bpos)
         return pos;
-    a -= 8;
-    b -= 8;
+    auto xpos = apos + 64 - bpos;
+    auto i = 64 - bpos;
 
-    return 0;
+    if (xpos == 64) {
+        // -----333 22222222 11111111 00000---
+        // -----333 22222222 11111111 00000---
+        for (; i <= cnt; i += 64) {
+            aval = ntoh64(a -= 8);
+            bval = ntoh64(b -= 8);
+            pos = ::rmismatch(aval, bval);
+            if (pos < 64)
+                return min(i + pos, cnt);
+        }
+        return cnt;
+    }
+
+    for (; i + 64 < cnt; i += 64) {
+        auto a2 = ntoh64(a -= 8);
+        auto ax = (aval >> xpos) | (a2 << (64 - xpos));
+        bval = ntoh64(b -= 8);
+        pos = ::rmismatch(ax, bval);
+        if (pos < 64)
+            return i + pos;
+        aval = a2;
+    }
+    if (i + 64 - xpos < cnt) {
+        auto a2 = ntoh64(a -= 8);
+        aval = (aval >> xpos) | (a2 << (64 - xpos));
+    } else {
+        aval = (aval >> xpos);
+    }
+    bval = ntoh64(b -= 8);
+    pos = ::rmismatch(aval, bval);
+    return min(i + pos, cnt);
 }
 
 //===========================================================================

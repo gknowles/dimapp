@@ -282,11 +282,14 @@ static void mistestStep(
     auto adat = a.data();
     auto bdat = b.data();
     auto pre = BitSpan::mismatch(adat, apos, cnt, bdat, bpos, cnt);
-    if (pre != pos) {
+    auto expect = pos >= cnt
+        ? cnt   // No mark within field, expect length of entire field.
+        : pos;  // Mark within field, expect distance from start to mark.
+    if (pre != expect) {
         logMsgError() << "Line " << __LINE__ << " mismatch ( "
             << "{ " << apos << ", " << cnt << " }, "
             << "{ " << bpos << ", " << cnt << " } diff @" << pos
-            << " ): output " << pre << ", expected " << pos;
+            << " ): output " << pre << ", expected " << expect;
     }
     b.reset(bpos + pos);
 }
@@ -368,17 +371,20 @@ static void rmistestStep(
     size_t pos,
     const source_location & sloc = source_location::current()
 ) {
-    b.reset(bpos + pos);
+    b.set(bpos + pos);
     auto adat = a.data();
     auto bdat = b.data();
     auto pre = BitSpan::rmismatch(adat, apos, cnt, bdat, bpos, cnt);
-    if (pre != 63 - pos) {
+    auto expect = pos >= cnt
+        ? cnt            // No mark in field, expect length of entire field.
+        : cnt - pos - 1; // Mark in field, expect distance after mark to end.
+    if (pre != expect) {
         logMsgError() << "Line " << sloc.line() << " rmismatch ( "
             << "{ " << apos << ", " << cnt << " }, "
             << "{ " << bpos << ", " << cnt << " } diff @" << pos
-            << " ): output " << pre << ", expected " << pos;
+            << " ): output " << pre << ", expected " << expect;
     }
-    b.set(bpos + pos);
+    b.reset(bpos + pos);
 }
 
 //===========================================================================
@@ -391,10 +397,8 @@ static void rmistest(
     size_t pos,
     const source_location & sloc = source_location::current()
 ) {
-    a.reset();
-    a.set(apos, cnt);
-    b.reset();
-    b.set(bpos, cnt);
+    a.set();
+    a.reset(apos, cnt);
     rmistestStep(a, apos, b, bpos, cnt, pos, sloc);
 }
 
@@ -404,17 +408,19 @@ static void rmismatchTests() {
     uint64_t db[4];
     BitSpan a(da, size(da));
     BitSpan b(db, size(db));
+    b.reset();
 
-    rmistest(a, 2, b, 4,  0, 0);
+    //                   cnt  pos
+    rmistest(a, 0, b, 0,   1,   0);
+    rmistest(a, 0, b, 1, 127,  63);
+    rmistest(a, 2, b, 4,   0,   0);
 
     if (s_opts.full) {
         for (size_t oa = 0; oa < 64; ++oa) {
             for (size_t ob = 0; ob < 64; ++ob) {
                 for (size_t cnt = 0; cnt < 3 * 64; ++cnt) {
-                    a.reset();
-                    a.set(oa, cnt);
-                    b.reset();
-                    b.set(ob, cnt);
+                    a.set();
+                    a.reset(oa, cnt);
                     for (size_t pos = 0; pos <= cnt; ++pos) {
                         rmistestStep(a, oa, b, ob, cnt, pos);
                         if (!checkErrorLimit())
@@ -533,11 +539,11 @@ CmdOpts::CmdOpts() {
 //===========================================================================
 static void app(Cli & cli) {
     for (auto&& fn : {
-        mismatchTests,
-        rmismatchTests,
-        copyTests,
         setBitTests,
         findTests,
+        copyTests,
+        mismatchTests,
+        rmismatchTests,
     }) {
         fn();
         if (!checkErrorLimit())
