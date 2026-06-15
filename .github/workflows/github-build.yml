@@ -18,13 +18,13 @@ jobs:
       matrix:
         platform: [x64]
         configuration: [Debug, Release]
-        toolset: [v142, v143, v145]
+        toolset: [v145]
         image: [windows-2025-vs2026]
         coverage: [false]
         include:
           - platform: x64
             configuration: Debug
-            toolset: v143
+            toolset: v145
             image: windows-2025-vs2026
             coverage: true
     runs-on: ${{matrix.image}}
