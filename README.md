@@ -1,11 +1,11 @@
 <!--
-Copyright Glen Knowles 2016 - 2025.
+Copyright Glen Knowles 2016 - 2026.
 Distributed under the Boost Software License, Version 1.0.
 -->
 
 # dimapp
 
-| MSVC 2022 | Test Coverage |
+| MSVC 2026 | Test Coverage |
 | :-------: | :-----------: |
 | [![Build Status][ci-badge]][ci-link] | [![Coverage][cov-badge]][cov-link] |
 
