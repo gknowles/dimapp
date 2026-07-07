@@ -10,6 +10,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
+## cmtupd 2.0.2 (2026-07-07)
+- Added - Warn when no actions are defined
+
 ## cmtupd 2.0.1 (2025-02-22)
 - Fixed - Hang when no matching files are selected
 

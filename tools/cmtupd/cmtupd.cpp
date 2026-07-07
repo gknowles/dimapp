@@ -15,7 +15,7 @@ using namespace Dim;
 *
 ***/
 
-const VersionInfo kVersion = { 2, 0, 1 };
+const VersionInfo kVersion = { 2, 0, 2 };
 
 
 /****************************************************************************
@@ -377,6 +377,10 @@ static bool loadRules(
         ) {
             return false;
         }
+    }
+    if (!out->numActions) {
+        logMsgWarn() << "Invalid '" << out->configFile
+            << "', no Rule/Match/Action elements.";
     }
     return true;
 }
