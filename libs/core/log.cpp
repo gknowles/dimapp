@@ -302,8 +302,8 @@ void Dim::logParseError(
     string_view msg,
     string_view name,
     size_t pos,
-    string_view content) {
-
+    string_view content
+) {
     auto lineNum = 1 + count(content.begin(), content.begin() + pos, '\n');
     logMsgError() << name << "(" << lineNum << "): " << msg;
 
