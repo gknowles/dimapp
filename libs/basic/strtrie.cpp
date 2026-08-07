@@ -1002,28 +1002,9 @@ static void setForkBit(
 ***/
 
 //===========================================================================
-[[nodiscard]] static NodeRef addKeyRef(SearchState * ss) {
-    auto out = makeUpdateRef(ss);
-    if (!nextKeyVal(ss))
-        newUpdate<UpdateEndMark>(ss);
-    return out;
-}
-
-//===========================================================================
-[[nodiscard]] static NodeRef copyRef(SearchState * ss) {
-    NodeRef out;
-    if (nodeEndMarkFlag(ss->node)) {
-        out = makeUpdateRef(ss);
-        newUpdate<UpdateEndMark>(ss);
-    } else {
-        auto hdrLen = nodeHdrLen(ss->node);
-        out = makeSourceRef(
-            ss,
-            ss->inode + hdrLen,
-            nodeLen(ss->node + hdrLen)
-        );
-    }
-    return out;
+static void addEndMark(SearchState * ss) {
+    assert(ss->kpos == ss->klen);
+    [[maybe_unused]] auto & upd = newUpdate<UpdateEndMark>(ss);
 }
 
 //===========================================================================
@@ -1080,6 +1061,31 @@ static NodeRef * addForkWithEnd(
     } else {
         return { &fork.refs[1], &fork.refs[0] };
     }
+}
+
+//===========================================================================
+[[nodiscard]] static NodeRef addKeyRef(SearchState * ss) {
+    auto out = makeUpdateRef(ss);
+    if (!nextKeyVal(ss))
+        addEndMark(ss);
+    return out;
+}
+
+//===========================================================================
+[[nodiscard]] static NodeRef copyRef(SearchState * ss) {
+    NodeRef out;
+    if (nodeEndMarkFlag(ss->node)) {
+        out = makeUpdateRef(ss);
+        newUpdate<UpdateEndMark>(ss);
+    } else {
+        auto hdrLen = nodeHdrLen(ss->node);
+        out = makeSourceRef(
+            ss,
+            ss->inode + hdrLen,
+            nodeLen(ss->node + hdrLen)
+        );
+    }
+    return out;
 }
 
 //===========================================================================
@@ -1701,7 +1707,7 @@ static bool insertAtFork (SearchState * ss) {
         return true;
     } else {
         if (ss->kpos == ss->klen)
-            newUpdate<UpdateEndMark>(ss);
+            addEndMark(ss);
         return false;
     }
 }
@@ -1740,8 +1746,11 @@ static bool insertAtRemote(SearchState * ss) {
 //===========================================================================
 static void addSegs(SearchState * ss) {
     assert(ss->kpos <= ss->klen);
-    if (ss->kpos % 2 == 1)
+    if (ss->kpos % 2 == 1) {
+        // We are after a half byte therefore, since all keys are made of 8-bit
+        // bytes, there is a second half waiting.
         addKeyHalfSeg(ss);
+    }
     while (int slen = ss->klen - ss->kpos) {
         assert(slen > 1);
         auto & upd = newUpdate<UpdateSeg>(ss);
@@ -1763,7 +1772,10 @@ static void addSegs(SearchState * ss) {
 bool StrTrieBase::insert(string_view key) {
     TempHeap heap;
     auto ss = Node::makeState(&heap, this, key, false);
-    if (!empty()) {
+    if (empty()) {
+        if (ss->kpos == ss->klen)
+            addEndMark(ss);
+    } else {
         seekRootNode(ss);
         ss->spages.insert(ss->pgno);
 
@@ -1932,7 +1944,7 @@ static void eraseForkWithEnd(SearchState * ss) {
         }
     }
     // Otherwise replace fork with end mark.
-    newUpdate<UpdateEndMark>(ss);
+    addEndMark(ss);
 }
 
 //===========================================================================

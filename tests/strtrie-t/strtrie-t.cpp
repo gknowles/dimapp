@@ -1,4 +1,4 @@
-// Copyright Glen Knowles 2019 - 2025.
+// Copyright Glen Knowles 2019 - 2026.
 // Distributed under the Boost Software License, Version 1.0.
 //
 // strtrie-t.cpp - dim test strtrie
@@ -243,6 +243,7 @@ inline static void internalTests() {
     string out;
     check(vals.empty());
 
+    insertTest({"", "a"});
     insertTest({"abc"}, {"", "b", "ab", "abb", "abd", "abcd"});
 
     // SEG NODE
