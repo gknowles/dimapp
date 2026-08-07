@@ -26,7 +26,7 @@ using USet = IntegralSet<unsigned,
 // Multiroot (1)
 //  data[0] & 0x7 = kNodeMultiroot
 //  data[0] & 0xf0 = number of roots (1 - 16)
-// Segment (2) - must be byte aligned with key, no odd nibble starts.
+// Segment (2) - always byte aligned with key, no odd nibble starts.
 //  data[0] & 0x7 = kNodeSeg
 //  data[0] & 0x8 = has end of key
 //  data[0] & 0xf0 = keyLen (1 - 16) in full bytes (no odd nibble)
@@ -813,6 +813,19 @@ static bool pushFoundKeyConsume(SearchState * ss, bool forUpdate = false) {
     seekKid(ss, 0);
     consumeIfRemote(ss, forUpdate);
     return true;
+}
+
+//===========================================================================
+static void pushFoundFork(SearchState * ss, int pos) {
+    auto & fork = ss->forks.emplace_back();
+    fork.kpos = pos;
+    fork.pgno = ss->pgno;
+    fork.inode = ss->inode;
+}
+
+//===========================================================================
+static void pushFoundFork(SearchState * ss) {
+    pushFoundFork(ss, (int) ss->foundKeyLen);
 }
 
 
@@ -2301,10 +2314,7 @@ static void seekFront(SearchState * ss) {
             if (!pushFoundKeyConsume(ss))
                 break;
         } else if (ntype == kNodeFork) {
-            auto & fork = ss->forks.emplace_back();
-            fork.kpos = (int) ss->foundKeyLen;
-            fork.pgno = ss->pgno;
-            fork.inode = ss->inode;
+            pushFoundFork(ss);
             if (nodeEndMarkFlag(ss->node))
                 break;
             auto bits = forkBits(ss->node);
@@ -2364,10 +2374,7 @@ static void seekBack(SearchState * ss) {
             if (!pushFoundKeyConsume(ss))
                 break;
         } else if (ntype == kNodeFork) {
-            auto & fork = ss->forks.emplace_back();
-            fork.kpos = (int) ss->foundKeyLen;
-            fork.pgno = ss->pgno;
-            fork.inode = ss->inode;
+            pushFoundFork(ss);
             auto bits = forkBits(ss->node);
             auto sval = lastForkVal(bits);
             pushFoundKeyVal(ss, sval);
@@ -2667,10 +2674,7 @@ static bool findAtFork(SearchState * ss) {
     auto bits = forkBits(ss->node);
     if (forkBit(bits, ss->kval)) {
         // kval == sval
-        auto & fork = ss->forks.emplace_back();
-        fork.kpos = ss->kpos;
-        fork.pgno = ss->pgno;
-        fork.inode = ss->inode;
+        pushFoundFork(ss, ss->kpos);
         auto pos = forkPos(bits, ss->kval);
         seekKid(ss, pos);
         // Advance kpos *after* using the old kval to get forkPos.
@@ -2678,8 +2682,9 @@ static bool findAtFork(SearchState * ss) {
         return true;
     }
 
-    // Not found, must be equal? fail.
+    // Not found.
     if constexpr (!kLess && !kGreater) {
+        // Searching for exact match, fail.
         ss->inode = 0;
         ss->node = nullptr;
     } else if (kLess) {
@@ -2691,6 +2696,7 @@ static bool findAtFork(SearchState * ss) {
         } else {
             // Follow value down this fork.
             setFoundKey(ss);
+            pushFoundFork(ss);
             pushFoundKeyVal(ss, sval);
             seekKid(ss, forkPos(bits, sval));
             seekBack(ss);
@@ -2704,6 +2710,7 @@ static bool findAtFork(SearchState * ss) {
         } else {
             // Follow value down this fork.
             setFoundKey(ss);
+            pushFoundFork(ss);
             pushFoundKeyVal(ss, sval);
             seekKid(ss, forkPos(bits, sval));
             seekFront(ss);
@@ -2722,8 +2729,8 @@ static bool findAtRemote(SearchState * ss) {
 //===========================================================================
 template<bool kLess, bool kGreater, bool kEqual>
 static StrTrieBase::Iter find(const StrTrieBase * cont,  string_view key) {
-    static_assert(!kLess || !kGreater);
-    static_assert(kLess || kGreater || kEqual);
+    static_assert(kLess || kGreater || kEqual
+        || kLess && kEqual || kGreater && kEqual);
 
     auto out = make_shared<StrTrieBase::Iter::Impl>(cont);
     if (cont->empty())

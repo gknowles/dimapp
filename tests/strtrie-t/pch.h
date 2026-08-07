@@ -20,6 +20,7 @@
 #include <map>
 #include <random>
 #include <ranges>
+#include <set>
 
 // Platform headers
 // External library internal headers

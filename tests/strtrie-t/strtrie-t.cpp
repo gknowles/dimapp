@@ -99,6 +99,142 @@ static void insertTest(
     check(vals.empty(), loc);
 }
 
+
+/****************************************************************************
+*
+*   Tismet tests
+*
+***/
+
+struct TismetKey {
+    enum Action {
+        kMatch,
+        kInsert,
+        kErase,
+        kFind,
+        kFindLessEqual,
+        kNext,
+    };
+    Action act = {};
+    string key;
+    const source_location sloc;
+
+    TismetKey(
+        Action act,
+        string key,
+        source_location loc = source_location::current()
+    );
+};
+
+//===========================================================================
+TismetKey::TismetKey(
+    Action act,
+    string key,
+    source_location loc
+)
+    : act(act)
+    , sloc(loc)
+{
+    hexToBytes(&this->key, key);
+}
+
+//===========================================================================
+inline static void tismetTests() {
+    if (s_verbose)
+        cout << "\n> TISMET TESTS" << endl;
+    StrTrie vals;
+    StrTrieBase::Iter iter = vals.begin();
+    set<string> expected;
+    auto eiter = expected.begin();
+    check(vals.empty());
+
+    TismetKey keys[] = {
+        { TismetKey::kInsert,        "01bdab52a039000005" },    //  5 - 1
+        { TismetKey::kInsert,        "01bdab5a07a67e0008" },    //  8 - 3
+        { TismetKey::kInsert,        "01bdab558f3dbe0007" },    //  7 - 2
+        { TismetKey::kInsert,        "01bdab602d3686000a" },    //  a - 4
+        { TismetKey::kInsert,        "01bdab6652c68e000b" },    //  b - 5
+        { TismetKey::kInsert,        "01bdab6c785696000e" },    //  e - 6
+        { TismetKey::kInsert,        "01bdab729de69e000f" },    //  f - 7
+        { TismetKey::kInsert,        "01bdab78c376a60010" },    // 10 - 8
+        { TismetKey::kInsert,        "01bdab5cf6ab3c0011" },    // 11 - 3.2
+        { TismetKey::kInsert,        "01bdab631c3b440012" },    // 12 - 4.2
+        { TismetKey::kInsert,        "01bdab6941cb4c0013" },    // 13 - 5.2
+        { TismetKey::kInsert,        "01bdab6f675b540014" },    // 14 - 6.2
+        { TismetKey::kInsert,        "01bdab758ceb5c0015" },    // 15 - 7.2
+        { TismetKey::kInsert,        "01bdab7e12730a0016" },    // 16 - 9
+        { TismetKey::kInsert,        "01bdab83616f6e0017" },    // 17 - 10
+        { TismetKey::kErase,         "01bdab52a039000005" },    // del 5 - 1
+        { TismetKey::kInsert,        "01bdab88b06bd20005" },    //  5 - 11
+        { TismetKey::kErase,         "01bdab558f3dbe0007" },
+        { TismetKey::kErase,         "01bdab5a07a67e0008" },
+        { TismetKey::kInsert,        "01bdab8dff68360007" },
+        { TismetKey::kErase,         "01bdab5cf6ab3c0011" },
+        { TismetKey::kErase,         "01bdab602d3686000a" },
+        { TismetKey::kInsert,        "01bdab934e649a0008" },
+        { TismetKey::kErase,         "01bdab631c3b440012" },
+        { TismetKey::kErase,         "01bdab6652c68e000b" },
+        { TismetKey::kInsert,        "01bdab989d60fe000a" },
+        { TismetKey::kErase,         "01bdab6941cb4c0013" },
+        { TismetKey::kFindLessEqual, "01bdab7309307000ffffffff" },
+        { TismetKey::kMatch,         "01bdab729de69e000f" },
+        { TismetKey::kNext,          "01bdab758ceb5c0015" },
+        { TismetKey::kFind,          "01bdab729de69e000f" },
+        { TismetKey::kNext,          "01bdab758ceb5c0015" },
+    };
+
+    bool v1, e1;
+    for (auto&& key : keys) {
+        switch (key.act) {
+        case TismetKey::kInsert:
+            v1 = insert(&vals, key.key);
+            e1 = expected.insert(key.key).second;
+            check(v1 == e1, key.sloc);
+            break;
+        case TismetKey::kErase:
+            v1 = erase(&vals, key.key);
+            e1 = expected.erase(key.key) == 1;
+            check(v1 == e1, key.sloc);
+            break;
+        case TismetKey::kFind:
+            printAction(&vals, key.key, "find");
+            iter = vals.find(key.key);
+            eiter = expected.find(key.key);
+            check(!iter == (eiter == expected.end()), key.sloc);
+            check(!iter || *iter == *eiter, key.sloc);
+            break;
+        case TismetKey::kFindLessEqual:
+            printAction(&vals, key.key, "findLessEqual");
+            iter = vals.findLessEqual(key.key);
+            eiter = expected.lower_bound(key.key);
+            if (eiter != expected.end())
+                --eiter;
+            check(!iter == (eiter == expected.end()), key.sloc);
+            check(!iter || *iter == *eiter, key.sloc);
+            break;
+        case TismetKey::kMatch:
+            printAction(&vals, key.key, "match");
+            check(iter && *iter == key.key, key.sloc);
+            check(eiter != expected.end() && *eiter == key.key);
+            break;
+        case TismetKey::kNext:
+            printAction(&vals, key.key, "next");
+            ++iter;
+            ++eiter;
+            check(*iter == key.key, key.sloc);
+            check(*eiter == key.key, key.sloc);
+            break;
+        }
+    }
+}
+
+
+/****************************************************************************
+*
+*   Internal tests
+*
+***/
+
 //===========================================================================
 inline static void internalTests() {
     if (s_verbose)
@@ -222,6 +358,13 @@ inline static void internalTests() {
     check(vals.empty());
 }
 
+
+/****************************************************************************
+*
+*   Fill tests
+*
+***/
+
 //===========================================================================
 static string toKey(uint64_t val) {
     const char * names[] = {
@@ -251,6 +394,13 @@ inline static void fillTests() {
     vals.StrTrieBase::clear();
     check(vals.empty());
 }
+
+
+/****************************************************************************
+*
+*   Random fill
+*
+***/
 
 //===========================================================================
 inline static void randomFill(size_t count, size_t maxLen, size_t charVals) {
@@ -327,6 +477,7 @@ static void app(Cli & cli) {
     if (s_test) {
         internalTests();
         fillTests();
+        tismetTests();
     }
     if (s_fill)
         randomFill(s_fill, 25, 26);
