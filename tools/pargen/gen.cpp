@@ -59,10 +59,7 @@ bool StateElement::operator==(const StateElement & right) const {
 
 //===========================================================================
 template<typename T>
-strong_ordering compare(
-    const vector<T> & a,
-    const vector<T> & b
-) {
+strong_ordering compare(const vector<T> & a, const vector<T> & b) {
     auto a1 = a.data();
     auto a2 = a1 + a.size();
     auto b1 = b.data();

@@ -193,7 +193,8 @@ void Grammar::addRule(
     Element * rule,
     string_view name,
     unsigned m,
-    unsigned n) {
+    unsigned n
+) {
     auto e = addElement(rule, m, n);
     e->type = Element::kRule;
     e->value = name;
@@ -212,7 +213,8 @@ void Grammar::addText(
     Element * rule,
     string_view value,
     unsigned m,
-    unsigned n) {
+    unsigned n
+) {
     auto s = addSequence(rule, m, n);
     for (unsigned char ch : value) {
         auto c = addChoice(s, 1, 1);
@@ -230,7 +232,8 @@ void Grammar::addLiteral(
     Element * rule,
     string_view value,
     unsigned m,
-    unsigned n) {
+    unsigned n
+) {
     auto s = addSequence(rule, m, n);
     for (unsigned char ch : value) {
         auto c = addChoice(s, 1, 1);
@@ -479,8 +482,7 @@ void merge(Grammar & rules) {
 
 //===========================================================================
 static void normalizeChoice(Element & rule) {
-    assert(
-        rule.elements.size() > 1
+    assert(rule.elements.size() > 1
         || rule.elements.size() == 1
             && rule.elements[0].type == Element::kTerminal);
     vector<Element> tmp;
@@ -528,7 +530,8 @@ static void normalizeSequence(Element & rule) {
             rule.elements.insert(
                 rule.elements.begin() + i + 1,
                 elem->elements.begin() + 1,
-                elem->elements.end());
+                elem->elements.end()
+            );
             elem = rule.elements.data() + i;
         }
         Element tmp = move(elem->elements.front());
@@ -555,7 +558,8 @@ static void normalize(
         Element & elem = rule.elements.front();
         if (elem.type != Element::kTerminal
             || parent && parent->type == Element::kChoice && rule.m == 1
-                && rule.n == 1) {
+                && rule.n == 1
+        ) {
             rule.m *= elem.m;
             rule.n = max({rule.n, elem.n, rule.n * elem.n});
             rule.type = elem.type;
