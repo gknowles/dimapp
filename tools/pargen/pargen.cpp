@@ -222,7 +222,7 @@ CmdOpts::CmdOpts() {
         .valueDesc("LEVEL")
         .desc("Strength of function tag preprocessing.")
         .choice(0, "0", "Remove all function tags.")
-        .choice(1, "1", "No change to function tags (default).")
+        .choice(1, "1", "No change to function tags.")
         .choice(2, "2", "Add function tags to break rule recursion.")
         .choice(3, "3", "Same as #2, but remove all existing tags first.")
         .check([&](auto & cli, auto & opt, const string & val) {
