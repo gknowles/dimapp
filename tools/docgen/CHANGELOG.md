@@ -10,6 +10,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
+## docgen 2.0.0
+- Changed - Require version badges (except Prelim for HEAD) to be explicit
+
 ## docgen 1.6.1 (2026-06-21)
 - Fixed - Misaligned line numbers in syntax highlighted code files
 

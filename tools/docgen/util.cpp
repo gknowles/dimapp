@@ -62,6 +62,11 @@ static bool loadVersions(Config * out, XNode * root) {
         ver.tag = attrValue(&xver, "tag", "");
         ver.name = attrValue(&xver, "name", ver.tag.c_str());
         ver.layout = attrValue(&xver, "layout", "");
+        if (ver.tag == "HEAD") {
+            ver.badge = attrValue(&xver, "badge", "Prelim");
+        } else {
+            ver.badge = attrValue(&xver, "badge", "");
+        }
         ver.defaultSource = attrValue(&xver, "default", false);
         if (ver.defaultSource) {
             if (out->defVersion != -1) {

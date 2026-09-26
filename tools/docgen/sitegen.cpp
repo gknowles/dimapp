@@ -363,27 +363,23 @@ static void addBootstrapBody(IXBuilder * out, const Page & page) {
 }
 
 //===========================================================================
-static void addBadge(
+static void addVerText(
     IXBuilder * out,
-    bool beforeDefault,
-    bool afterDefault
+    const Config & cfg,
+    const Version & version
 ) {
-    const char * badge = nullptr;
-    const char * text = nullptr;
-    if (beforeDefault) {
-        assert(!afterDefault);
-        badge = "badge prelim-badge";
-        text = "Prelim";
-    } else if (afterDefault) {
-        badge = "badge old-badge";
-        text = "Old";
-    } else {
-        return;
+    out->text(version.name);
+    if (auto it = cfg.tagDates.find(version.name); it != cfg.tagDates.end()) {
+        Time8601Str str(it->second);
+        out->text(" (").text(str.view().substr(0, 10)).text(")");
     }
+    if (version.badge.empty())
+        return;
+    string css = "badge " + toLower(version.badge) + "-badge";
     out->text(" ")
         .start("span")
-            .attr("class", badge)
-            .text(text)
+            .attr("class", css)
+            .text(version.badge)
             .end();
 }
 
@@ -476,9 +472,8 @@ static void addNavbar(
                 .attr("data-reference", "parent")
                 .attr("aria-haspopup", "true")
                 .attr("aria-expanded", "false")
-                .attr("title", "Version")
-                .text(version.name);
-    addBadge(&bld, beforeDefault, afterDefault);
+                .attr("title", "Version");
+    addVerText(&bld, cfg, version);
     bld.end()
         .start("div")
             .attr("class", "dropdown-menu dropdown-menu-md-right")
@@ -500,10 +495,7 @@ static void addNavbar(
         } else {
             bld.attr("href", page.urlRoot / ver.tag / "index.html");
         }
-        if (ver.defaultSource)
-            beforeDefault = false;
-        bld.text(ver.name);
-        addBadge(&bld, beforeDefault, afterDefault);
+        addVerText(&bld, cfg, ver);
         bld.end();
         if (ver.defaultSource)
             afterDefault = true;
@@ -1044,6 +1036,47 @@ static void loadFavicon(
 }
 
 //===========================================================================
+static void genTagDates(Config * out, string content) {
+    vector<string_view> strs;
+    split(&strs, content, '\n');
+    for (auto && str : strs) {
+        TimePoint time;
+        str = trim(str);
+
+        if (str.size() > 25 && str[25] == ' '
+            && timeParse8601(&time, str.substr(0, 25))
+        ) {
+            auto tag = str.substr(26);
+            out->tagDates[string(tag)] = time;
+        }
+    }
+}
+
+//===========================================================================
+static void loadTagDates(Config * out, unsigned phase) {
+    out->pendingWork += 1;
+    auto cmdline = Cli::toCmdlineL(
+        "git",
+        "-C",
+        out->configFile.parentPath(),
+        "for-each-ref",
+        "--format=%(committerdate:iso-strict) %(refname:short)",
+        "--include-root-refs",
+        "refs/tags",
+        "HEAD"
+    );
+    execTool(
+        [out, phase](auto && res) {
+            if (res.success && !empty(res.output))
+                genTagDates(out, res.output);
+            genSite(out, phase);
+        },
+        cmdline,
+        "Load tag commit dates"
+    );
+}
+
+//===========================================================================
 static void genSite(Config * out, unsigned phase) {
     if (appStopping()) {
         if (--out->pendingWork == 0)
@@ -1066,6 +1099,9 @@ static void genSite(Config * out, unsigned phase) {
 
         // Load favicon.ico.
         loadFavicon(out, out, what, "HEAD");
+
+        // Load tags and their corresponding commit dates.
+        loadTagDates(out, what);
 
         // Load site files
         for (auto&& file : out->files) {

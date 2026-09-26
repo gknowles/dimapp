@@ -18,6 +18,7 @@ struct Version {
     std::string name; // defaults to tag
     std::string layout;
     std::string tag;
+    std::string badge;
     bool defaultSource = false;
 
     std::unique_ptr<Config> cfg;
@@ -130,6 +131,9 @@ struct Config {
     std::vector<Version> versions;
     std::unordered_map<std::string, Version*> versionsByTag;
     std::vector<SiteFile> files;
+
+    // All tags and their commit dates.
+    std::unordered_map<std::string, Dim::TimePoint> tagDates;
 
     std::string sampDir;
     std::unordered_map<std::string, std::shared_ptr<Compiler>> compilers;

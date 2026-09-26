@@ -18,6 +18,7 @@
 // Standard headers
 #include <cstdio>
 #include <cstdlib>
+#include <format>
 #include <iostream>
 #include <iterator>
 #include <list>
