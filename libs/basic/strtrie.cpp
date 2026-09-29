@@ -798,8 +798,9 @@ static void pushFoundKeyVal(SearchState * ss, string_view val) {
 }
 
 //===========================================================================
-// Pushes seg or half seg value onto found key, advances to next node (following
-// remote node if present), and returns false if there is no following node.
+// Pushes seg or half seg value onto found key, advances to next node
+// (following remote node if present), and returns false if there is no
+// following node.
 static bool pushFoundKeyConsume(SearchState * ss, bool forUpdate = false) {
     if (nodeType(ss->node) == kNodeSeg) {
         pushFoundKeyVal(ss, segView(ss->node));
@@ -1415,9 +1416,9 @@ static void applyUpdates(SearchState * ss) {
     assert(!unblocked.empty());
 
     // Process updated nodes and related fringe nodes into virtual pages. Start
-    // with leaf nodes, with branches becoming unblocked for processing when all
-    // their leaves are done. Continues all the way up until the root node is
-    // processed. Child virtual pages are merged up into their parents when
+    // with leaf nodes, with branches becoming unblocked for processing when
+    // all their leaves are done. Continues all the way up until the root node
+    // is processed. Child virtual pages are merged up into their parents when
     // possible.
     for (;;) {
         auto id = unblocked.back();
