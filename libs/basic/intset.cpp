@@ -2075,8 +2075,8 @@ bool IntegralSet<T,A>::Impl::rfindMeta(
 *       storage_type key
 *   )
 *
-*   Find largest value in segment contiguously connected with pos. Returns false
-*   if may extend into the next node.
+*   Find largest value in segment contiguously connected with pos. Returns
+*   false if may extend into the next node.
 *
 ***/
 
@@ -2299,8 +2299,8 @@ bool IntegralSet<T,A>::Impl::rcontigSmv(
     auto ptr = lower_bound(node.localValues, last, key);
     auto val = key;
     if (ptr == last || *ptr != val) {
-        // Base not found, return that search is done, but leave output node and
-        // value unchanged.
+        // Base not found, return that search is done, but leave output node
+        // and value unchanged.
         return true;
     }
     *onode = &node;
@@ -2333,8 +2333,8 @@ bool IntegralSet<T,A>::Impl::rcontigVec(
     auto ptr = lower_bound(node.values, last, key);
     auto val = key;
     if (ptr == last || *ptr != val) {
-        // Base not found, return that search is done, but leave output node and
-        // value unchanged.
+        // Base not found, return that search is done, but leave output node
+        // and value unchanged.
         return true;
     }
     *onode = &node;
@@ -2629,13 +2629,13 @@ int IntegralSet<T,A>::Impl::cmpBit(uint64_t left, uint64_t right) {
         if (left != (right & (kMask << countr_zero(left)))) {
             // left bitmap > right bitmap. Which means the right side has gaps,
             // paradoxically making it greater lexicographically. For example,
-            // { 1, 2, 3 } < { 1, 3 }, since at the second position 2 < 3. Where
-            // the bitmap representations compare reversed, 111 > 101.
+            // { 1, 2, 3 } < { 1, 3 }, since at the second position 2 < 3.
+            // Where the bitmap representations compare reversed, 111 > 101.
             return 1;
         } else {
-            // left and right only differ where left has trailing zeros, so if
-            // left has any following non-zero nodes it would be larger
-            // lexicographically due to having the larger gap.
+            // Left and right only differ where left has trailing zeros, so if
+            // left has following non-zero nodes it would be lexicographically
+            // larger due to having the larger gap.
             return -2;
         }
     } else {
@@ -3355,7 +3355,7 @@ NOT_FULL:
 
 /****************************************************************************
 *
-*   erase(A* alloc, Node * left, const Node & right)
+*   erase(A * alloc, Node * left, const Node & right)
 *
 ***/
 
@@ -3402,7 +3402,8 @@ void IntegralSet<T,A>::Impl::eraChange(
     auto ri = iterator::makeFirst(&right);
     assert(ri);
 
-    // Convert from full to either bitmap or meta, and only then erase the rest.
+    // Convert from full to either bitmap or meta, and only then erase the
+    // rest.
     erase(alloc, left, *ri, 1);
     erase(alloc, left, right);
 }
@@ -3650,8 +3651,8 @@ void IntegralSet<T,A>::Impl::isecLArray(
     storage_type * li,
     const Node & right
 ) {
-    // Go through values of left vector and remove the ones that aren't found in
-    // right node.
+    // Go through values of left vector and remove the ones that aren't found
+    // in right node.
     auto base = li;
     auto out = li;
     auto le = li + left->numValues;
