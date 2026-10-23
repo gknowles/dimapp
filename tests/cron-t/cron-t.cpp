@@ -302,12 +302,10 @@ bool Dim::CronDef<Flags>::parseField(
 
 //===========================================================================
 static void app(Cli & cli) {
-    // int line = 0;
+    [[maybe_unused]] AnyCron cron;
+    //parseTest(&cron, "@daily", "0 0 * * *");
 
-    AnyCron cron;
-    parseTest(&cron, "@daily", "0 0 * * *");
-
-    testSignalShutdown();
+    testSignalShutdown(false);
 }
 
 

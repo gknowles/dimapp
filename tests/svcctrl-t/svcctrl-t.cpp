@@ -143,12 +143,9 @@ void internalTest() {
 *
 ***/
 
-static bool s_test;
-
 //===========================================================================
 void app(Cli & cli) {
-    if (s_test)
-        internalTest();
+    internalTest();
     testSignalShutdown();
 }
 
@@ -161,8 +158,6 @@ void app(Cli & cli) {
 
 //===========================================================================
 int main(int argc, char * argv[]) {
-    Cli cli;
-    cli.helpNoArgs().action(app);
-    cli.opt(&s_test, "test.").desc("Run internal unit tests");
+    Cli().action(app);
     return appRun(argc, argv, fAppTest);
 }

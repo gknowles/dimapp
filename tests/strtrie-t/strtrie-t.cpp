@@ -466,26 +466,19 @@ inline static void randomFill(size_t count, size_t maxLen, size_t charVals) {
 ***/
 
 static int s_fill;
-static bool s_test;
 
 //===========================================================================
 static void app(Cli & cli) {
-    if (!s_test && !s_fill) {
-        cout << "No tests run" << endl;
-        return appSignalShutdown(EX_OK);
-    }
-
-    if (s_test) {
+    if (!s_fill) {
         internalTests();
         fillTests();
         tismetTests();
-    }
-    if (s_fill)
+        testSignalShutdown();
+    } else {
         randomFill(s_fill, 25, 26);
-
-    testSignalShutdown();
-    if (s_fill)
+        testSignalShutdown();
         logStopwatch();
+    }
 }
 
 
@@ -499,11 +492,11 @@ static void app(Cli & cli) {
 int main(int argc, char * argv[]) {
     cout.imbue(locale(""));
     Cli cli;
-    cli.helpNoArgs().action(app);
+    cli.action(app);
     cli.opt(&s_verbose, "v verbose.")
         .desc("Dump container state between tests.");
     cli.opt(&s_fill, "f fill").siUnits("")
-        .desc("Randomly fill a container with this many values.");
-    cli.opt(&s_test, "test", false).desc("Run internal unit tests");
+        .desc("Instead of default tests, randomly fill a container with "
+            "this many values.");
     return appRun(argc, argv, kVersion, {}, fAppTest);
 }

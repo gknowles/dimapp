@@ -71,7 +71,11 @@ void Dim::testLogMsgs(const vector<pair<LogType, string>> & msgs) {
 ***/
 
 //===========================================================================
-void Dim::testSignalShutdown() {
+void Dim::testSignalShutdown(bool implemented) {
+    if (!implemented) {
+        ConsoleScopedAttr attr(kConsoleWarn);
+        cout << "No tests implemented." << endl;
+    }
     if (int errs = logGetMsgCount(kLogTypeError)) {
         ConsoleScopedAttr attr(kConsoleError);
         cerr << "*** TEST FAILURES: " << errs

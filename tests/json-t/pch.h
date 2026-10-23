@@ -9,8 +9,10 @@
 // External library public headers
 #include "dimcli/cli.h"
 
+#include "app/app.h"
 #include "core/core.h"
 #include "file/file.h"
+#include "tools/tools.h"
 
 // Standard headers
 #include <fstream>

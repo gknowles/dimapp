@@ -359,7 +359,6 @@ const Test s_tests[] = {
 ***/
 
 static bool s_verbose;
-static bool s_test;
 
 
 /****************************************************************************
@@ -409,11 +408,6 @@ void Reader::onHpackHeader(
 
 //===========================================================================
 static void app(Cli & cli) {
-    if (!s_test) {
-        cout << "No tests run." << endl;
-        return appSignalShutdown(EX_OK);
-    }
-
     TempHeap heap;
     HpackDecode decode(256);
     Reader out;
@@ -456,10 +450,8 @@ static void app(Cli & cli) {
 //===========================================================================
 int main(int argc, char * argv[]) {
     Cli cli;
-    cli.helpNoArgs().action(app);
+    cli.action(app);
     cli.opt(&s_verbose, "v verbose.")
         .desc("Display details of what's happening during processing.");
-    cli.opt(&s_test, "test", false)
-        .desc("Run internal unit tests.");
     return appRun(argc, argv, kVersion, {}, fAppTest);
 }

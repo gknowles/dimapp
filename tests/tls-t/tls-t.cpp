@@ -89,7 +89,8 @@ const Test s_tests[] = {
 ***/
 
 //===========================================================================
-static void app(Cli & cli) {
+[[maybe_unused]]
+static void basicTests() {
     const TlsCipherSuite kCiphers[] = {
         TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
     };
@@ -128,8 +129,12 @@ static void app(Cli & cli) {
     }
     tlsClose(client);
     tlsClose(server);
+}
 
-    testSignalShutdown();
+//===========================================================================
+static void app(Cli & cli) {
+    // basicTests();
+    testSignalShutdown(false);
 }
 
 

@@ -304,6 +304,5 @@ int main(int argc, char * argv[]) {
     // _CrtSetBreakAlloc(2109);
 
     Cli().action(app);
-    int code = appRun(argc, argv, fAppTest);
-    return code;
+    return appRun(argc, argv, fAppTest);
 }

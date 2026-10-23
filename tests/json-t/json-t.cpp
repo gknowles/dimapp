@@ -29,17 +29,25 @@ using namespace Dim;
 *
 ***/
 
+struct CmdOpts {
+    Path path;
+    bool echo;
+
+    CmdOpts();
+};
+static CmdOpts s_opts;
+
 static int s_errors;
 
 
 /****************************************************************************
 *
-*   Helpers
+*   Tests
 *
 ***/
 
 //===========================================================================
-int internalTest() {
+void internalTest() {
     int line = 0;
 
     CharBuf out;
@@ -79,13 +87,68 @@ int internalTest() {
     const char kTest2[] = "[\"a b\",\n\"1+1=2\"\n]\n";
     str2 = toString(out);
     EXPECT(str2 == kTest2);
+}
 
-    if (s_errors) {
-        cerr << "*** TEST FAILURES: " << s_errors << " (json)" << endl;
-        return EX_SOFTWARE;
+
+/****************************************************************************
+*
+*   CmdOpts
+*
+***/
+
+//===========================================================================
+CmdOpts::CmdOpts() {
+    Cli cli;
+    cli.versionOpt("1.0 (" __DATE__ ")");
+    cli.opt(&path, "f file")
+        .desc("File to check is well-formed");
+    cli.opt(&echo, "echo")
+        .desc("Echo json if well-formed (only if file given)");
+}
+
+
+/****************************************************************************
+*
+*   Application
+*
+***/
+
+//===========================================================================
+static void app(Cli & cli) {
+    if (!s_opts.path) {
+        internalTest();
+        return testSignalShutdown();
     }
-    cout << "All tests passed (json)" << endl;
-    return EX_OK;
+
+    // Parse file.
+    s_opts.path.defaultExt("json");
+    string content;
+    if (auto ec = fileLoadBinaryWait(&content, s_opts.path); ec)
+        return appSignalShutdown(EX_DATAERR);
+    JDocument doc;
+    auto root = doc.parse(content.data(), s_opts.path);
+    if (!root || doc.errmsg()) {
+        logParseError(
+            "json: Parsing failed",
+            s_opts.path,
+            doc.errpos(),
+            content
+        );
+        return appSignalShutdown(EX_DATAERR);
+    }
+    cout << "File '" << doc.filename() << "' is well-formed." << endl;
+
+    // Echo file (if requested).
+    if (s_opts.echo) {
+        cout << endl;
+        CharBuf out;
+        JBuilder bld(&out);
+        bld << *root;
+        out.pushBack(0);
+        cout << out.data();
+    }
+
+    appSignalShutdown();
 }
 
 
@@ -102,46 +165,6 @@ int main(int argc, char * argv[]) {
         | _CRTDBG_DELAY_FREE_MEM_DF);
     _set_error_mode(_OUT_TO_MSGBOX);
 
-    Cli cli;
-    cli.helpNoArgs();
-    auto & path = cli.opt<Path>("[json file]")
-        .desc("File to check is well-formed");
-    auto & test = cli.opt<bool>("test.")
-        .desc("Run internal unit tests");
-    auto & echo = cli.opt<bool>("echo")
-        .desc("Echo json if well-formed");
-    cli.versionOpt("1.0 (" __DATE__ ")");
-    if (!cli.parse(argc, argv))
-        return cli.printError(cerr);
-    if (*test)
-        return internalTest();
-    if (path->empty())
-        return cli.printHelp(cout);
-
-    path->defaultExt("json");
-    string content;
-    if (auto ec = fileLoadBinaryWait(&content, *path); ec)
-        return EX_DATAERR;
-    JDocument doc;
-    auto root = doc.parse(content.data(), *path);
-    if (root && !doc.errmsg()) {
-        cout << "File '" << doc.filename() << "' is well-formed." << endl;
-        if (*echo) {
-            cout << endl;
-            CharBuf out;
-            JBuilder bld(&out);
-            bld << *root;
-            out.pushBack(0);
-            cout << out.data();
-        }
-        return EX_OK;
-    }
-
-    logParseError(
-        "json: Parsing failed",
-        *path,
-        doc.errpos(),
-        content
-    );
-    return EX_DATAERR;
+    Cli().action(app);
+    return appRun(argc, argv, fAppTest);
 }

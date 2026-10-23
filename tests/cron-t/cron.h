@@ -106,8 +106,9 @@ private:
         kWeekDomPos = kLastDomPos + ((Flags & WithLastDomOffset)
             ? 30 : (Flags & WithLastDom) ? 1 : 0),
         kLastAndWeekDomPos = kWeekDomPos + ((Flags & WithWeekDays) ? 31 : 0),
-        kHasDomPos = kLastAndWeekDomPos + ((~Flags & WithWeekDays) ? 0
-            : (Flags & WithLastDomOffset) ? 30 : (Flags & WithLastDom) ? 1 : 0),
+        kHasDomPos = kLastAndWeekDomPos + ((~Flags & WithWeekDays)
+            ? 0 : (Flags & WithLastDomOffset)
+                ? 30 : (Flags & WithLastDom) ? 1 : 0),
         kMonPos = kHasDomPos + 1,
         kDowPos = kMonPos + 12,
         kLastDowPos = kDowPos + 7,
@@ -234,6 +235,9 @@ bool Dim::CronDef<Flags>::parse(std::string_view src) {
         }
         assert(src[0] != '@');
     }
+
+    std::string buf(src);
+    src = {buf.data(), buf.size() + 1};
 
     if constexpr (Flags & WithSeconds) {
         if (!parseField(&d, kSecPos, &src, 0, 59, nullptr))

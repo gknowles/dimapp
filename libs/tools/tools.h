@@ -82,9 +82,10 @@ void testLogMsgs(
     const std::vector<std::pair<LogType, std::string>> & msgs
 );
 
-// Uses logGetMsgCount() and appBaseName() to print final pass/fail report
-// and signal shutdown with EX_OK or EX_SOFTWARE.
-void testSignalShutdown();
+// Uses logGetMsgCount() and appBaseName() to print final pass/fail report and
+// signal shutdown with EX_OK or EX_SOFTWARE. If 'implemented' is false an
+// additional "No tests implemented" warning is printed.
+void testSignalShutdown(bool implemented = true);
 
 
 } // namespace
