@@ -24,7 +24,7 @@ public:
     TaskQueueHandle hq;
     string name;
 
-    // current threads have been created, haven't exited, but may not have
+    // Current threads have been created, haven't exited, but may not have
     // run yet.
     int curThreads{0};
     int wantThreads{0};
@@ -33,6 +33,7 @@ public:
     ITaskNotify * last{};
 
     condition_variable cv;
+    mutex mut;
 };
 
 
@@ -68,17 +69,38 @@ public:
 *
 ***/
 
-static HandleMap<TaskQueueHandle, TaskQueue> s_queues;
-static int s_numThreads;
-static mutex s_mut;
-static condition_variable s_destroyed;
-static int s_numDestroyed;
-static int s_numEnded;
+static auto & s_perfThreads = iperf("task.threads");
+static auto & s_perfDestroyed = iperf("task.shutdowns");
+static auto & s_perfEnded = iperf("task.threads (ended)");
 
 static TaskQueueHandle s_eventQ;
 thread_local bool t_inEventThread;
 static TaskQueueHandle s_computeQ;
 static atomic_bool s_running;
+
+
+/****************************************************************************
+*
+*   Queue Handles
+*
+***/
+
+static HandleMap<TaskQueueHandle, TaskQueue> s_queues;
+static shared_mutex s_qmut;
+static condition_variable_any s_qdestroyed;
+
+//===========================================================================
+static TaskQueue * getQ(TaskQueueHandle hq) {
+    shared_lock lk{s_qmut};
+    return s_queues.find(hq);
+}
+
+//===========================================================================
+static TaskQueueHandle setQ(TaskQueue * q) {
+    unique_lock lk{s_qmut};
+    q->hq = s_queues.insert(q);
+    return q->hq;
+}
 
 
 /****************************************************************************
@@ -93,7 +115,7 @@ static void taskQueueThread(TaskQueue * ptr) {
     TaskQueue & q{*ptr};
     iThreadSetName(q.name);
     bool more{true};
-    unique_lock lk{s_mut};
+    unique_lock lk{q.mut};
     while (more) {
         while (!q.first)
             q.cv.wait(lk);
@@ -106,34 +128,30 @@ static void taskQueueThread(TaskQueue * ptr) {
         lk.lock();
     }
     q.curThreads -= 1;
-    s_numThreads -= 1;
+    s_perfThreads -= 1;
 
-    if (!s_numThreads) {
-        s_numDestroyed += 1;
+    if (!s_perfThreads) {
+        s_perfDestroyed += 1;
         lk.unlock();
-        s_destroyed.notify_one();
+        s_qdestroyed.notify_one();
     }
 }
 
 //===========================================================================
-static void setThreads_LK(
-    const unique_lock<mutex> & lk,
-    TaskQueue * q,
-    size_t threads
-) {
-    assert(lk && lk.mutex() == &s_mut);
+static void setThreads(TaskQueue * q, size_t threads) {
+    unique_lock lk(q->mut);
     int num = (int) threads - q->wantThreads;
     q->wantThreads = (int)threads;
     if (num > 0) {
         q->curThreads += num;
-        s_numThreads += num;
+        s_perfThreads += num;
         for (int i = 0; i < num; ++i) {
             thread thr{taskQueueThread, q};
             thr.detach();
         }
     } else if (num < 0) {
         for (int i = 0; i > num; --i) {
-            s_numEnded += 1;
+            s_perfEnded += 1;
             auto task = new EndThreadTask;
             q->push(q, *task);
         }
@@ -220,15 +238,15 @@ void Dim::iTaskInitialize() {
 //===========================================================================
 void Dim::iTaskDestroy() {
     s_running = false;
-    unique_lock lk{s_mut};
+    unique_lock lk{s_qmut};
 
     // send shutdown task to all task threads
     for (auto && q : s_queues)
-        setThreads_LK(lk, q.second, 0);
+        setThreads(q.second, 0);
 
     // wait for all threads to stop
-    while (s_numThreads)
-        s_destroyed.wait(lk);
+    while (s_perfThreads)
+        s_qdestroyed.wait(lk);
 
     // delete task queues
     for (auto && q : s_queues)
@@ -294,19 +312,17 @@ TaskQueueHandle Dim::taskCreateQueue(string_view name, int threads) {
     auto q = new TaskQueue;
     q->name = name;
 
-    unique_lock lk{s_mut};
-    q->hq = s_queues.insert(q);
-    setThreads_LK(lk, q, threads);
-    return q->hq;
+    auto hq = setQ(q);
+    setThreads(q, threads);
+    return hq;
 }
 
 //===========================================================================
 void Dim::taskSetQueueThreads(TaskQueueHandle hq, int threads) {
     assert(s_running);
 
-    unique_lock lk{s_mut};
-    auto q = s_queues.find(hq);
-    setThreads_LK(lk, q, threads);
+    auto q = getQ(hq);
+    setThreads(q, threads);
 }
 
 //===========================================================================
@@ -331,8 +347,8 @@ void Dim::taskPush(
     if (!numTasks)
         return;
 
-    scoped_lock lk{s_mut};
-    auto q = s_queues.find(hq);
+    auto q = getQ(hq);
+    unique_lock lk{q->mut};
     for (auto i = 0; (size_t) i < numTasks; ++tasks, ++i)
         q->push(q, **tasks);
 
