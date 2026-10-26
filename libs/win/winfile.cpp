@@ -118,8 +118,34 @@ static NtCloseFn s_NtClose;
 
 static TaskQueueHandle s_hq;
 
+
+/****************************************************************************
+*
+*   FileHandle Storage and Mapping
+*
+***/
+
 static shared_mutex s_fileMut;
 static HandleMap<FileHandle, WinFileInfo> s_files;
+
+//===========================================================================
+static WinFileInfo * getInfo(FileHandle f, bool release = false) {
+    if (release) {
+        unique_lock lk{s_fileMut};
+        return s_files.release(f);
+    } else {
+        shared_lock lk{s_fileMut};
+        return s_files.find(f);
+    }
+}
+
+//===========================================================================
+static FileHandle setInfo(unique_ptr<WinFileInfo> && info) {
+    auto file = info.release();
+    unique_lock lk{s_fileMut};
+    file->m_f = s_files.insert(file);
+    return file->m_f;
+}
 
 
 /****************************************************************************
@@ -583,9 +609,7 @@ static error_code allocHandle(
         }
     }
 
-    unique_lock lk{s_fileMut};
-    *out = s_files.insert(file.get());
-    file.release()->m_f = *out;
+    *out = setInfo(move(file));
     return {};
 }
 
@@ -767,9 +791,7 @@ static error_code attachStdHandle(
         return err.code();
     }
 
-    unique_lock lk{s_fileMut};
-    *out = s_files.insert(file.get());
-    file.release()->m_f = *out;
+    *out = setInfo(move(file));
     return {};
 }
 
@@ -786,17 +808,6 @@ error_code Dim::fileAttachStdout(FileHandle * out) {
 //===========================================================================
 error_code Dim::fileAttachStderr(FileHandle * out) {
     return attachStdHandle(out, STD_ERROR_HANDLE, "STDERR", fm::fReadWrite);
-}
-
-//===========================================================================
-static WinFileInfo * getInfo(FileHandle f, bool release = false) {
-    if (release) {
-        unique_lock lk{s_fileMut};
-        return s_files.release(f);
-    } else {
-        shared_lock lk{s_fileMut};
-        return s_files.find(f);
-    }
 }
 
 //===========================================================================
