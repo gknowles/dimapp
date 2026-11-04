@@ -11,27 +11,33 @@ using namespace Dim;
 
 /****************************************************************************
 *
-*   HandleMap
+*   HandleStore
 *
 ***/
 
 //===========================================================================
-HandleMapBase::HandleMapBase() {
+HandleStore::HandleStore() {
     m_values.push_back({nullptr, 0});
 }
 
 //===========================================================================
-HandleMapBase::~HandleMapBase() {
-    assert(empty());
+HandleStore::~HandleStore() {
+    assert(doEmpty());
 }
 
 //===========================================================================
-bool HandleMapBase::empty() const {
+bool HandleStore::doEmpty() const {
     return !m_numUsed;
 }
 
 //===========================================================================
-HandleContent * HandleMapBase::find(HandleBase handle) {
+span<HandleMapNode> HandleStore::doSpan() {
+    auto data = m_values.data();
+    return span<HandleMapNode>(data, data + m_values.size());
+}
+
+//===========================================================================
+HandleContent * HandleStore::doFind(HandleBase handle) {
     assert(handle.pos >= 0);
     return handle.pos <= 0 || handle.pos >= (int)m_values.size()
         ? nullptr
@@ -39,14 +45,14 @@ HandleContent * HandleMapBase::find(HandleBase handle) {
 }
 
 //===========================================================================
-HandleBase HandleMapBase::insert(HandleContent * value) {
+HandleBase HandleStore::doInsert(HandleContent * value) {
     int pos;
     if (!m_firstFree) {
         m_values.push_back({value, 0});
         pos = (int)m_values.size() - 1;
     } else {
         pos = m_firstFree;
-        Node & node = m_values[pos];
+        HandleMapNode & node = m_values[pos];
         m_firstFree = node.next;
         node = {value, 0};
     }
@@ -56,11 +62,11 @@ HandleBase HandleMapBase::insert(HandleContent * value) {
 }
 
 //===========================================================================
-HandleContent * HandleMapBase::release(HandleBase handle) {
+HandleContent * HandleStore::doRelease(HandleBase handle) {
     assert(handle.pos >= 0);
     if (handle.pos <= 0 || handle.pos >= (int)m_values.size())
         return nullptr;
-    Node & node = m_values[handle.pos];
+    HandleMapNode & node = m_values[handle.pos];
     if (!node.value)
         return nullptr;
 
@@ -69,4 +75,41 @@ HandleContent * HandleMapBase::release(HandleBase handle) {
     node = {nullptr, m_firstFree};
     m_firstFree = handle.pos;
     return value;
+}
+
+
+/****************************************************************************
+*
+*   HandleStoreAsync
+*
+***/
+
+//===========================================================================
+bool HandleStoreAsync::doEmpty() const {
+    shared_lock lk{m_mut};
+    return s.doEmpty();;
+}
+
+//===========================================================================
+span<HandleMapNode> HandleStoreAsync::doSpan() {
+    shared_lock lk{m_mut};
+    return s.doSpan();
+}
+
+//===========================================================================
+HandleContent * HandleStoreAsync::doFind(HandleBase handle) {
+    shared_lock lk{m_mut};
+    return s.doFind(handle);
+}
+
+//===========================================================================
+HandleBase HandleStoreAsync::doInsert(HandleContent * value) {
+    unique_lock lk{m_mut};
+    return s.doInsert(value);
+}
+
+//===========================================================================
+HandleContent * HandleStoreAsync::doRelease(HandleBase handle) {
+    unique_lock lk{m_mut};
+    return s.doRelease(handle);
 }
