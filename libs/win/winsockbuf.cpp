@@ -79,13 +79,18 @@ static auto & s_perfSlices = uperf("sock.buffer slices");
 ***/
 
 //===========================================================================
-static BufferSlice * getSlice(const Buffer & buf, int pos) {
+static BufferSlice * getSlice_LK(
+    const unique_lock<mutex> & lk,
+    const Buffer & buf,
+    int pos
+) {
     char * ptr = (char *)buf.base + pos * buf.sliceSize;
     return (BufferSlice *)ptr;
 }
 
 //===========================================================================
-static void findBufferSlice(
+static void findBufferSlice_LK(
+    const unique_lock<mutex> & lk,
     BufferSlice ** sliceOut,
     Buffer ** bufferOut,
     const SocketBuffer & sbuf
@@ -95,7 +100,8 @@ static void findBufferSlice(
     auto * buf = s_buffers.find(h);
     assert(h == buf->h);
     // BufferSlice must be aligned within the owning registered buffer
-    assert((char *)slice >= buf->base && slice < getSlice(*buf, buf->size));
+    assert((char *)slice >= buf->base
+        && slice < getSlice_LK(lk, *buf, buf->size));
     assert(((char *)slice - buf->base) % buf->sliceSize == 0);
 
     *sliceOut = slice;
@@ -103,7 +109,7 @@ static void findBufferSlice(
 }
 
 //===========================================================================
-static void createEmptyBuffer() {
+static void createEmptyBuffer_LK(const unique_lock<mutex> & lk) {
     size_t bytes = s_bufferSize;
     size_t granularity = s_memcfg.allocAlign;
     DWORD fLargePages = 0;
@@ -155,7 +161,8 @@ static void createEmptyBuffer() {
 }
 
 //===========================================================================
-static void createBufferSlice(
+static void createBufferSlice_LK(
+    const unique_lock<mutex> & lk,
     BufferSlice ** sliceOut,
     Buffer ** bufOut
 ) {
@@ -165,18 +172,18 @@ static void createBufferSlice(
         pbuf = s_emptyBufs.front();
     if (!pbuf) {
         // all buffers full? create a new one
-        createEmptyBuffer();
+        createEmptyBuffer_LK(lk);
         pbuf = s_emptyBufs.front();
     }
     auto & buf = *pbuf;
 
     BufferSlice * slice;
     if (buf.used < buf.size) {
-        slice = getSlice(buf, buf.firstFree);
+        slice = getSlice_LK(lk, buf, buf.firstFree);
         buf.firstFree = slice->nextPos;
     } else {
         assert(buf.size < buf.reserved);
-        slice = getSlice(buf, buf.size);
+        slice = getSlice_LK(lk, buf, buf.size);
         buf.size += 1;
     }
     buf.used += 1;
@@ -196,7 +203,7 @@ static void createBufferSlice(
 }
 
 //===========================================================================
-static void destroyEmptyBuffer() {
+static void destroyEmptyBuffer_LK(const unique_lock<mutex> & lk) {
     assert(s_emptyBufs);
     auto buf = s_emptyBufs.unlinkFront();
     auto hostage = unique_ptr<Buffer>(s_buffers.release(buf->h));
@@ -207,11 +214,14 @@ static void destroyEmptyBuffer() {
 }
 
 //===========================================================================
-static void destroyBufferSlice(const SocketBuffer & sbuf) {
+static void destroyBufferSlice_LK(
+    const unique_lock<mutex> & lk,
+    const SocketBuffer & sbuf
+) {
     // get the header
     BufferSlice * slice;
     Buffer * pbuf;
-    findBufferSlice(&slice, &pbuf, sbuf);
+    findBufferSlice_LK(lk, &slice, &pbuf, sbuf);
     auto & buf = *pbuf;
 
     slice->nextPos = buf.firstFree;
@@ -227,7 +237,7 @@ static void destroyBufferSlice(const SocketBuffer & sbuf) {
 
         // over half the buffers are empty? destroy one
         if (s_emptyBufs.size() > s_fullBufs.size() + s_partialBufs.size())
-            destroyEmptyBuffer();
+            destroyEmptyBuffer_LK(lk);
     }
 
     s_perfSlices -= 1;
@@ -242,8 +252,8 @@ static void destroyBufferSlice(const SocketBuffer & sbuf) {
 
 //===========================================================================
 SocketBuffer::~SocketBuffer() {
-    scoped_lock lk{s_mut};
-    destroyBufferSlice(*this);
+    unique_lock lk{s_mut};
+    destroyBufferSlice_LK(lk, *this);
 }
 
 
@@ -268,9 +278,9 @@ void ShutdownNotify::onShutdownConsole(bool firstTry) {
     if (firstTry)
         return shutdownIncomplete();
 
-    scoped_lock lk{s_mut};
+    unique_lock lk{s_mut};
     while (s_buffers)
-        destroyEmptyBuffer();
+        destroyEmptyBuffer_LK(lk);
 }
 
 
@@ -296,12 +306,12 @@ void Dim::copy(
     const SocketBuffer & sbuf,
     size_t bytes
 ) {
-    scoped_lock lk{s_mut};
+    unique_lock lk{s_mut};
 
     assert(bytes <= (size_t) sbuf.capacity);
     BufferSlice * slice;
     Buffer * pbuf;
-    findBufferSlice(&slice, &pbuf, sbuf);
+    findBufferSlice_LK(lk, &slice, &pbuf, sbuf);
     out->BufferId = pbuf->id;
     out->Offset = ULONG((char *)sbuf.data - (char *)pbuf->base);
     out->Length = (int)bytes;
@@ -321,11 +331,11 @@ WinError Dim::wsaError() {
 
 //===========================================================================
 unique_ptr<SocketBuffer> Dim::socketGetBuffer() {
-    scoped_lock lk{s_mut};
+    unique_lock lk{s_mut};
 
     BufferSlice * slice;
     Buffer * pbuf;
-    createBufferSlice(&slice, &pbuf);
+    createBufferSlice_LK(lk, &slice, &pbuf);
 
     // set pointer to just passed the header
     auto out = make_unique<SocketBuffer>(
