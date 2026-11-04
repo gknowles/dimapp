@@ -55,7 +55,7 @@ private:
 *
 ***/
 
-static mutex s_mut;
+static shared_mutex s_mut;
 static HandleMap<ResHandle, ResModule> s_modules;
 
 
@@ -211,7 +211,7 @@ ResHandle Dim::resOpen(string_view path) {
     if (!res->open(Path{path}))
         return {};
 
-    scoped_lock lk{s_mut};
+    unique_lock lk{s_mut};
     return s_modules.insert(res.release());
 }
 
@@ -221,7 +221,7 @@ ResHandle Dim::resOpenForUpdate(string_view path) {
     if (!res->openForUpdate(Path{path}))
         return {};
 
-    scoped_lock lk{s_mut};
+    unique_lock lk{s_mut};
     return s_modules.insert(res.release());
 }
 
@@ -240,6 +240,7 @@ bool Dim::resClose(ResHandle h, bool commit) {
 
 //===========================================================================
 bool Dim::resUpdate(ResHandle h, string_view name, string_view data) {
+    shared_lock lk{s_mut};
     if (auto res = s_modules.find(h))
         return res->updateData(name, data);
     return false;
@@ -247,6 +248,7 @@ bool Dim::resUpdate(ResHandle h, string_view name, string_view data) {
 
 //===========================================================================
 bool Dim::resLoadNames(ResHandle h, vector<string> * names) {
+    shared_lock lk{s_mut};
     if (auto res = s_modules.find(h))
         return res->loadNames(names);
     return false;
@@ -254,6 +256,7 @@ bool Dim::resLoadNames(ResHandle h, vector<string> * names) {
 
 //===========================================================================
 string_view Dim::resLoadData(ResHandle h, string_view name) {
+    shared_lock lk{s_mut};
     if (auto res = s_modules.find(h))
         return res->loadData(name);
     return {};
