@@ -189,6 +189,7 @@
 # libs/win/winiocp.cpp
 # libs/win/winpipe.cpp
 # libs/win/winplatform.cpp
+# libs/win/winreg.h
 # libs/win/winres.cpp
 # libs/win/winsock.cpp
 # libs/win/winsockacc.cpp
