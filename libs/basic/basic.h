@@ -10,6 +10,7 @@
 #include "cppconf/cppconf.h"
 
 #include "algo.h"
+#include "atomic.h"
 #include "bitspan.h"
 #include "charbuf.h"
 #include "endian.h"

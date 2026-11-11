@@ -25,6 +25,7 @@
 # libs/app/webadmin.cpp
 # libs/app/webadmin.h
 # libs/basic/algo.h
+# libs/basic/atomic.h
 # libs/basic/basic.h
 # libs/basic/basic.natvis
 # libs/basic/bitspan.cpp
@@ -174,6 +175,7 @@
 # libs/win/pch.h
 # libs/win/win.h
 # libs/win/winaddress.cpp
+# libs/win/winatomic.cpp
 # libs/win/winconsole.cpp
 # libs/win/wincrash.cpp
 # libs/win/windebug.cpp
