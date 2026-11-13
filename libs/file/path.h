@@ -221,6 +221,7 @@ struct std::hash<Dim::Path> {
 *
 ***/
 
+#if 0
 #pragma warning(push)
 #pragma warning(disable: 4996) // disable deprecated warning for u8path
 
@@ -244,3 +245,4 @@ inline std::filesystem::path::path(
 }
 
 #pragma warning(pop)
+#endif
