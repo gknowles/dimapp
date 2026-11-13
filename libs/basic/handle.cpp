@@ -31,9 +31,13 @@ bool HandleStore::doEmpty() const {
 }
 
 //===========================================================================
-span<HandleMapNode> HandleStore::doSpan() {
-    auto data = m_values.data();
-    return span<HandleMapNode>(data, data + m_values.size());
+pair<HandleBase, HandleContent *> HandleStore::doNext(HandleBase h) {
+    h.pos += 1;
+    if (h.pos >= m_values.size()) {
+        return {};
+    } else {
+        return {h, m_values[h.pos].value};
+    }
 }
 
 //===========================================================================
@@ -91,9 +95,9 @@ bool HandleStoreAsync::doEmpty() const {
 }
 
 //===========================================================================
-span<HandleMapNode> HandleStoreAsync::doSpan() {
+pair<HandleBase, HandleContent *> HandleStoreAsync::doNext(HandleBase h) {
     shared_lock lk{m_mut};
-    return s.doSpan();
+    return s.doNext(h);
 }
 
 //===========================================================================

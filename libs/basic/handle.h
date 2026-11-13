@@ -59,13 +59,13 @@ template <typename H, typename T, typename S>
 class HandleMapBase : public S {
 public:
     class Iterator {
-        HandleMapNode * node{};
-        HandleMapNode * base{};
-        HandleMapNode * end{};
+        HandleMapBase & base;
+        H h{};
+        T * value{};
 
     public:
-        Iterator() {}
-        Iterator(HandleMapNode * base, HandleMapNode * end);
+        Iterator(HandleMapBase & base);
+        Iterator(HandleMapBase & base, HandleBase h);
 
         bool operator==(const Iterator & right) const;
         std::pair<H, T *> operator*();
@@ -121,7 +121,8 @@ void HandleMapBase<H, T, S>::clear() {
 //===========================================================================
 template<typename H, typename T, typename S>
 H HandleMapBase<H, T, S>::insert(T * value) {
-    return S::doInsert(value).as<H>();
+    HandleBase h = S::doInsert(value);
+    return h.as<H>();
 }
 
 //===========================================================================
@@ -139,15 +140,13 @@ T * HandleMapBase<H, T, S>::release(H handle) {
 //===========================================================================
 template<typename H, typename T, typename S>
 inline auto HandleMapBase<H, T, S>::begin() -> Iterator {
-    std::span<HandleMapNode> s = S::doSpan();
-    auto data = s.data();
-    return Iterator(data, data + s.size());
+    return Iterator(*this, HandleBase{});
 }
 
 //===========================================================================
 template<typename H, typename T, typename S>
 inline auto HandleMapBase<H, T, S>::end() -> Iterator {
-    return Iterator{};
+    return Iterator(*this);
 }
 
 
@@ -159,44 +158,38 @@ inline auto HandleMapBase<H, T, S>::end() -> Iterator {
 
 //===========================================================================
 template<typename H, typename T, typename S>
-HandleMapBase<H, T, S>::Iterator::Iterator(
-    HandleMapNode * base,
-    HandleMapNode * end
-)
-    : node{base}
-    , base{base}
-    , end{end}
+HandleMapBase<H, T, S>::Iterator::Iterator(HandleMapBase & base)
+    : base{base}
+{}
+
+//===========================================================================
+template<typename H, typename T, typename S>
+HandleMapBase<H, T, S>::Iterator::Iterator(HandleMapBase & base, HandleBase h)
+    : base{base}
+    , h{h}
 {
-    for (; node != end; ++node) {
-        if (node->value)
-            return;
-    }
-    node = nullptr;
+    h.pos -= 1;
+    ++*this;
 }
 
 //===========================================================================
 template<typename H, typename T, typename S>
 bool HandleMapBase<H, T, S>::Iterator::operator==(const Iterator & right) const {
-    return node == right.node;
+    return h == right.h;
 }
 
 //===========================================================================
 template<typename H, typename T, typename S>
 std::pair<H, T *> HandleMapBase<H, T, S>::Iterator::operator*() {
-    H handle;
-    handle.pos = int(node - base);
-    return std::make_pair(handle, static_cast<T *>(node->value));
+    return std::make_pair(h, value);
 }
 
 //===========================================================================
 template<typename H, typename T, typename S>
 auto HandleMapBase<H, T, S>::Iterator::operator++() -> Iterator& {
-    node += 1;
-    for (; node != end; ++node) {
-        if (node->value)
-            return *this;
-    }
-    node = nullptr;
+    auto hv = base.S::doNext(h);
+    h.pos = hv.first.pos;
+    value = static_cast<T *>(hv.second);
     return *this;
 }
 
@@ -213,7 +206,7 @@ public:
     ~HandleStore();
 
     bool doEmpty() const;
-    std::span<HandleMapNode> doSpan();
+    std::pair<HandleBase, HandleContent *> doNext(HandleBase handle);
     HandleContent * doFind(HandleBase handle);
     HandleBase doInsert(HandleContent * value);
     HandleContent * doRelease(HandleBase handle);
@@ -234,7 +227,7 @@ private:
 class HandleStoreAsync {
 protected:
     bool doEmpty() const;
-    std::span<HandleMapNode> doSpan();
+    std::pair<HandleBase, HandleContent *> doNext(HandleBase handle);
     HandleContent * doFind(HandleBase handle);
     HandleBase doInsert(HandleContent * value);
     HandleContent * doRelease(HandleBase handle);
